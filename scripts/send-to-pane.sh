@@ -138,6 +138,27 @@ main() {
   sentinel_file="/tmp/lecture-team-sentinel-${task_id}.done"
   rm -f "$sentinel_file" || true
 
+  # task_id 패턴(task-<chapter>-<role>)에서 chapter_id 추출 — director가 STATE.json
+  # active_agents 갱신을 잊지 않도록 send-to-pane.sh 가 자동 처리한다.
+  local chapter_id=""
+  if [[ "$task_id" =~ ^task-(chapter-[0-9]+)-(decomposer|composer|designer|developer|reviewer)$ ]]; then
+    chapter_id="${BASH_REMATCH[1]}"
+  fi
+
+  # STATE.json 에 active_agents 항목 추가 (atomic) — "decomposer:chapter-01" 형식
+  if [ -n "$chapter_id" ] && [ -f STATE.json ]; then
+    local agent_key="${pane_name}:${chapter_id}"
+    local tmp
+    tmp="$(mktemp STATE.json.tmp.XXXXXX)"
+    jq --arg agent "$agent_key" --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+       --arg task_id "$task_id" --arg role "$pane_name" --arg chapter "$chapter_id" \
+       '
+       .active_agents = ((.active_agents // []) | map(select(. != $agent)) + [$agent])
+       | .recent_events = ((.recent_events // []) | . + [{ts: $ts, agent: $role, action: "dispatched", chapter: $chapter, task_id: $task_id}])
+       | .updated_at = $ts
+       ' STATE.json > "$tmp" && mv "$tmp" STATE.json
+  fi
+
   # 모든 워커 pane은 interactive `claude` (Claude Code Sonnet) 세션이다.
   # send-keys 로 prompt 텍스트를 Claude UI에 paste 한다 (shell 명령 실행 아님).
   # multi-line prompt 안정 전달을 위해 tmux paste-buffer 사용.
@@ -160,6 +181,25 @@ main() {
 
   if [ "$wait_mode" = "true" ]; then
     wait_for_sentinel_file "$sentinel_file" "$timeout_seconds"
+    local exit_code=$?
+
+    # 완료(또는 timeout) — STATE.json 의 active_agents 에서 항목 제거 + completed 이벤트 기록
+    if [ -n "$chapter_id" ] && [ -f STATE.json ]; then
+      local agent_key="${pane_name}:${chapter_id}"
+      local action
+      if [ "$exit_code" = "0" ]; then action="completed"; else action="timeout"; fi
+      local tmp
+      tmp="$(mktemp STATE.json.tmp.XXXXXX)"
+      jq --arg agent "$agent_key" --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+         --arg task_id "$task_id" --arg role "$pane_name" --arg chapter "$chapter_id" \
+         --arg action "$action" \
+         '
+         .active_agents = ((.active_agents // []) | map(select(. != $agent)))
+         | .recent_events = ((.recent_events // []) | . + [{ts: $ts, agent: $role, action: $action, chapter: $chapter, task_id: $task_id}])
+         | .updated_at = $ts
+         ' STATE.json > "$tmp" && mv "$tmp" STATE.json
+    fi
+    return $exit_code
   fi
 }
 

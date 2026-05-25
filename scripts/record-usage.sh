@@ -81,10 +81,12 @@ fi
 NOW="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 TMP="$(mktemp "${STATE_FILE}.tmp.XXXXXX")"
 
-# STATE.json 미존재 시 최소 스키마 생성
+# STATE.json 미존재 시 최소 스키마 생성 (대시보드가 기대하는 모든 키 포함)
 if [ ! -f "$STATE_FILE" ]; then
   jq -n --arg ts "$NOW" \
-    '{course: "unknown", chapters: [], usage: {total_tokens: 0, call_count: 0, session_started_at: $ts, last_call_at: $ts}, updated_at: $ts}' \
+    '{course: "unknown", overall_progress: 0, cumulative_cost_usd: 0,
+      usage: {total_tokens: 0, call_count: 0, session_started_at: $ts, last_call_at: $ts},
+      chapters: [], active_agents: [], queue: [], recent_events: [], updated_at: $ts}' \
     >"$STATE_FILE"
 fi
 
