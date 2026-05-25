@@ -231,7 +231,9 @@ send_bootstrap() {
   local role="$2"
   local root_quoted="$3"
 
-  tmux send-keys -t "$pane_id" "cd ${root_quoted}; if [ -f .env ]; then set -a; source .env; set +a; fi; clear; printf '%s\n' '[${role}] booting Claude Code (Sonnet, bypass mode)...'; claude --model sonnet --dangerously-skip-permissions" C-m
+  # --effort high : Sonnet 의 thinking budget 을 깊은 추론 단계로. Sonnet 가용 단계는
+  #                 low/medium/high/max (xhigh 는 Opus 4.7 전용). high 가 PoC 에 적정.
+  tmux send-keys -t "$pane_id" "cd ${root_quoted}; if [ -f .env ]; then set -a; source .env; set +a; fi; clear; printf '%s\n' '[${role}] booting Claude Code (Sonnet, effort=high, bypass)...'; claude --model sonnet --effort high --dangerously-skip-permissions" C-m
 }
 
 create_session() {
