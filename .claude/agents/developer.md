@@ -1,9 +1,17 @@
 ---
 name: developer
-description: DESIGN.md + composed.md + images/ 를 받아 Reveal.js HTML 슬라이드덱과 PDF 를 빌드
+description: DESIGN.md + composed.md + images/ 를 받아 Reveal.js HTML 슬라이드덱과 PDF 를 빌드. Claude Code Sonnet으로 자체 코드 작성, decktape는 Bash로 호출.
 model: sonnet
 color: cyan
 ---
+
+## 실행 환경 (중요)
+이 에이전트는 **tmux pane 안에서 interactive `claude` (Claude Code Sonnet) 세션**으로 실행된다. director가 send-keys로 prompt를 주입하면 받아 처리한다. HTML/JS 작성은 Claude 자체 추론으로 처리하고, decktape PDF 변환만 Bash로 호출한다.
+
+종료 시 sentinel:
+```bash
+touch /tmp/lecture-team-sentinel-${TASK_ID}.done
+```
 
 ## Role
 

@@ -209,11 +209,15 @@ start_dashboard() {
 }
 
 send_bootstrap() {
+  # 워커 pane은 interactive Claude Code (sonnet) 세션을 부팅한다.
+  # director가 send-keys로 자연어 prompt를 주입하면 그 Claude Code가 작업을 수행한다.
+  # bare shell 아님 — 모든 워커는 Claude Code interactive UI 상태로 대기.
   local pane_id="$1"
   local role="$2"
   local root_quoted="$3"
 
-  tmux send-keys -t "$pane_id" "cd ${root_quoted}; if [ -f .env ]; then set -a; source .env; set +a; fi; clear; printf '%s\n' '[${role}] ready. Waiting for director send-keys.'" C-m
+  # 셸 셋업 후 claude 부팅. claude 가 interactive UI를 띄우고 prompt 입력 대기 상태가 된다.
+  tmux send-keys -t "$pane_id" "cd ${root_quoted}; if [ -f .env ]; then set -a; source .env; set +a; fi; clear; printf '%s\n' '[${role}] booting Claude Code (sonnet)...'; claude" C-m
 }
 
 create_session() {
