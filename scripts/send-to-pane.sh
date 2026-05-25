@@ -126,8 +126,34 @@ main() {
 
   sentinel="# AGENT_DONE_SIGNAL: ${task_id}"
   sentinel_file="/tmp/lecture-team-sentinel-${task_id}.done"
-  rm -f "$sentinel_file" || true
-  tmux send-keys -t "$target" "${command}; touch '${sentinel_file}'; echo '${sentinel}'" Enter
+  output_log="/tmp/lecture-team-output-${task_id}.log"
+  rm -f "$sentinel_file" "$output_log" || true
+
+  # task_id 패턴(task-<chapter>-<role>)에서 chapter_id 추출 — director 외 워커는 task-chapter-NN-role 형식
+  local chapter_id=""
+  if [[ "$task_id" =~ ^task-(chapter-[0-9]+)-(decomposer|composer|designer|developer)$ ]]; then
+    chapter_id="${BASH_REMATCH[1]}"
+  fi
+
+  # director 호출은 usage 추적 제외(자기 자신은 외부 codex 호출 없음). 워커만 wrap.
+  local wrapped_command
+  if [ -n "$chapter_id" ] && [ "$pane_name" != "director" ]; then
+    # bash 안에서 단일 따옴표는 esc 까다로움 → printf %q 로 안전하게 인자 quote
+    local proj_root_q chapter_q role_q log_q sentinel_q
+    proj_root_q="$(printf %q "$PWD")"
+    chapter_q="$(printf %q "$chapter_id")"
+    role_q="$(printf %q "$pane_name")"
+    log_q="$(printf %q "$output_log")"
+    sentinel_q="$(printf %q "$sentinel_file")"
+    # T0/T1: 호출 duration 측정
+    # 2>&1 | tee: stdout+stderr 모두 capture 하면서 화면에도 표시
+    # record-usage 실패해도 sentinel 은 계속 진행 (|| true)
+    wrapped_command="cd ${proj_root_q}; T0=\$(date +%s); { ${command}; } 2>&1 | tee ${log_q}; T1=\$(date +%s); bash scripts/record-usage.sh ${chapter_q} ${role_q} ${log_q} \$((T1-T0)) || true; touch ${sentinel_q}; echo '${sentinel}'"
+  else
+    wrapped_command="${command}; touch '${sentinel_file}'; echo '${sentinel}'"
+  fi
+
+  tmux send-keys -t "$target" "$wrapped_command" Enter
 
   if [ "$wait_mode" = "true" ]; then
     wait_for_sentinel_file "$sentinel_file" "$timeout_seconds"

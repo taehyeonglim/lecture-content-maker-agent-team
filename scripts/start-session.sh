@@ -55,6 +55,12 @@ init_state() {
       course: $course,
       overall_progress: 0,
       cumulative_cost_usd: 0,
+      usage: {
+        total_tokens: 0,
+        call_count: 0,
+        session_started_at: $now,
+        last_call_at: $now
+      },
       chapters: [
         {
           id: $chapter_id,

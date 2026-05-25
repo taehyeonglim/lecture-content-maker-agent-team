@@ -45,6 +45,35 @@ function formatCurrency(value) {
   return `$${toNumber(value).toFixed(2)}`;
 }
 
+function formatTokens(value) {
+  const n = toNumber(value);
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return `${n}`;
+}
+
+function formatDuration(seconds) {
+  const s = Math.max(0, Math.floor(toNumber(seconds)));
+  if (s < 60) return `${s}초`;
+  const m = Math.floor(s / 60);
+  const rs = s % 60;
+  if (m < 60) return `${m}분 ${rs}초`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return `${h}시간 ${rm}분`;
+}
+
+function deriveSessionDurationSec(usage) {
+  if (!usage || !usage.session_started_at) return 0;
+  const start = new Date(usage.session_started_at).getTime();
+  if (Number.isNaN(start)) return 0;
+  // last_call_at 이 있으면 그것까지, 없으면 현재 시각
+  const end = usage.last_call_at
+    ? new Date(usage.last_call_at).getTime()
+    : Date.now();
+  return Number.isFinite(end) ? Math.max(0, Math.round((end - start) / 1000)) : 0;
+}
+
 function formatDateTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "날짜 없음";
@@ -159,8 +188,11 @@ function renderTask(role, task) {
   const meta = createElement("div", "mt-2 text-xs text-gray-600");
   const reviewsPassed = task && task.reviews_passed !== undefined ? toNumber(task.reviews_passed) : 0;
   const model = task && task.model ? ` · ${task.model}` : "";
-  const cost = task && task.cost_usd !== undefined ? ` · ${formatCurrency(task.cost_usd)}` : "";
-  meta.textContent = `검수 통과 ${reviewsPassed}/3${model}${cost}`;
+  // task.usage 가 있으면 토큰·호출수 표시. 없거나 0 이면 — 표시
+  const usagePart = (task && task.usage && (task.usage.tokens || task.usage.calls))
+    ? ` · ${formatTokens(task.usage.tokens)} 토큰 (${toNumber(task.usage.calls)}회)`
+    : "";
+  meta.textContent = `검수 통과 ${reviewsPassed}/3${model}${usagePart}`;
 
   item.append(header, bar, meta);
   return item;
@@ -255,7 +287,12 @@ function updateDashboard(state) {
   hideMessage();
   setText("course-name", state.course || "강의명 없음");
   updateOverallProgress(state.overall_progress);
-  setText("cumulative-cost", formatCurrency(state.cumulative_cost_usd));
+  const usage = state.usage || {};
+  const tokens = formatTokens(usage.total_tokens);
+  const calls = toNumber(usage.call_count);
+  setText("cumulative-usage", `${tokens} 토큰 · ${calls} 호출`);
+  const durSec = deriveSessionDurationSec(usage);
+  setText("session-duration", `세션 시간: ${durSec > 0 ? formatDuration(durSec) : "-"}`);
   renderChapters(state.chapters);
   renderActiveAgents(state.active_agents);
   renderRecentEvents(state.recent_events);
@@ -275,7 +312,8 @@ async function pollState() {
     );
     setText("course-name", "대시보드 준비 중");
     updateOverallProgress(0);
-    setText("cumulative-cost", "$0.00");
+    setText("cumulative-usage", "0 토큰 · 0 호출");
+    setText("session-duration", "세션 시간: -");
     setText("updated-at", "업데이트 없음");
     const updatedAt = getElement("updated-at");
     if (updatedAt) updatedAt.removeAttribute("datetime");

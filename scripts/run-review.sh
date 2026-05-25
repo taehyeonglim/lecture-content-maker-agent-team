@@ -187,20 +187,14 @@ update_state_manual_override() {
   mv "$tmp_file" "$STATE_FILE"
 }
 
-record_cost_from_output() {
+record_usage_from_output() {
+  # reviewer 호출의 토큰 + duration을 record-usage.sh로 STATE.json에 누적.
+  # reviewer는 chapter.tasks[].role(decomposer/composer/designer/developer)과 직접 매칭되지 않으므로
+  # top-level usage만 증가하고 task별 usage는 reviewer 라운드 별도 추적은 안 함.
+  # (필요 시 별도 reviewer task entry를 만드는 방향으로 확장 가능)
   local output_file="$1"
-  local input_tokens output_tokens total_tokens cost_usd
-
-  input_tokens="$(parse_token_value "input" "$output_file")"
-  output_tokens="$(parse_token_value "output" "$output_file")"
-  total_tokens="$(parse_total_tokens "$output_file")"
-
-  if [[ "$input_tokens" == "0" && "$output_tokens" == "0" && "$total_tokens" != "0" ]]; then
-    input_tokens="$total_tokens"
-  fi
-
-  cost_usd="$(calculate_cost_usd "$input_tokens" "$output_tokens")"
-  update_state_cost "$cost_usd"
+  local duration_sec="${2:-0}"
+  bash scripts/record-usage.sh "$CHAPTER_ID" "reviewer" "$output_file" "$duration_sec" || true
 }
 
 run_codex_with_retry() {
@@ -263,12 +257,14 @@ mkdir -p "$REVIEW_DIR"
 for round in 1 2 3; do
   output_file="${REVIEW_DIR}/${ROLE}-round-${round}.md"
 
+  T0_REVIEW=$(date +%s)
   if ! run_codex_with_retry "$round" "$output_file"; then
     update_state_manual_override "reviewer codex exec failed after 3 attempts: ${ROLE} round ${round}"
     exit 2
   fi
+  T1_REVIEW=$(date +%s)
 
-  record_cost_from_output "$output_file"
+  record_usage_from_output "$output_file" "$((T1_REVIEW - T0_REVIEW))"
 
   issues_count="$(parse_issues_count "$output_file")"
   if [[ "$issues_count" == "0" ]]; then
