@@ -13,13 +13,23 @@ USAGE
 }
 
 pane_id_for() {
-  local title="$1"
-  case "$title" in
+  # @role pane-specific 옵션으로 lookup (Claude Code 의 title 동적 변경에 영향받지 않음)
+  # fallback: title 매칭 (이전 버전 호환)
+  local role="$1"
+  case "$role" in
     director|decomposer|composer|designer|developer) ;;
     *) return 1 ;;
   esac
+  local pane
+  pane="$(tmux list-panes -t "$SESSION_NAME" -a -F '#{pane_id}' \
+    -f "#{==:#{@role},${role}}" 2>/dev/null | head -n1)"
+  if [ -n "$pane" ]; then
+    echo "$pane"
+    return 0
+  fi
+  # fallback: title 매칭
   tmux list-panes -t "$SESSION_NAME" -a -F '#{pane_id}' \
-    -f "#{==:#{pane_title},${title}}" | head -n1
+    -f "#{==:#{pane_title},${role}}" 2>/dev/null | head -n1
 }
 
 validate_safe_command() {

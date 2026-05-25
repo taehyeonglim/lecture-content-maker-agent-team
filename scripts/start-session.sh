@@ -199,13 +199,21 @@ start_dashboard() {
     return 0
   fi
 
-  if port_is_free "$DASHBOARD_PORT"; then
-    # 프로젝트 루트에서 서빙 — poll.js가 /STATE.json 절대 경로로 fetch할 수 있게
-    nohup python3 -m http.server -d . "$DASHBOARD_PORT" >/dev/null 2>&1 &
-    echo "Dashboard server started on http://127.0.0.1:${DASHBOARD_PORT}/dashboard/"
-  else
-    echo "Dashboard port ${DASHBOARD_PORT} is already in use; assuming a server is already running."
+  # 실제 응답 가능한지 검증(TIME_WAIT 상태의 socket이 port_is_free에서 잘못 감지될 수 있음)
+  local existing_status
+  existing_status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 1 "http://127.0.0.1:${DASHBOARD_PORT}/dashboard/" 2>/dev/null || echo "000")
+  if [ "$existing_status" = "200" ]; then
+    echo "Dashboard server already running on http://127.0.0.1:${DASHBOARD_PORT}/dashboard/"
+    return 0
   fi
+  # 안 떠 있으면 (port_is_free 판단과 무관하게) 시작
+  if ! port_is_free "$DASHBOARD_PORT"; then
+    # socket이 점유 상태로 보이지만 응답 없음 → 잔여 프로세스 정리 시도
+    pkill -f "http.server.*${DASHBOARD_PORT}" 2>/dev/null || true
+    sleep 1
+  fi
+  nohup python3 -m http.server -d . "$DASHBOARD_PORT" >/dev/null 2>&1 &
+  echo "Dashboard server started on http://127.0.0.1:${DASHBOARD_PORT}/dashboard/"
 }
 
 send_bootstrap() {
@@ -246,12 +254,21 @@ create_session() {
   developer_pane="$(tmux split-window -v -p 67 -t "$designer_pane" -P -F '#{pane_id}' -c "$root_dir")"
   monitor_pane="$(tmux split-window -v -p 50 -t "$developer_pane" -P -F '#{pane_id}' -c "$root_dir")"
 
+  # 시각용 title (Claude Code 부팅 시 "✳ Claude Code"로 덮어써질 수 있음)
   tmux select-pane -t "$director_pane" -T "director"
   tmux select-pane -t "$decomposer_pane" -T "decomposer"
   tmux select-pane -t "$composer_pane" -T "composer"
   tmux select-pane -t "$designer_pane" -T "designer"
   tmux select-pane -t "$developer_pane" -T "developer"
   tmux select-pane -t "$monitor_pane" -T "STATE.json watch"
+
+  # 안정적 lookup용 pane-specific 사용자 옵션 (@role) — Claude Code 의 title 변경에 영향받지 않음
+  tmux set-option -p -t "$director_pane" '@role' 'director'
+  tmux set-option -p -t "$decomposer_pane" '@role' 'decomposer'
+  tmux set-option -p -t "$composer_pane" '@role' 'composer'
+  tmux set-option -p -t "$designer_pane" '@role' 'designer'
+  tmux set-option -p -t "$developer_pane" '@role' 'developer'
+  tmux set-option -p -t "$monitor_pane" '@role' 'monitor'
 
   director_message_quoted="$(shell_quote "${chapter_id} 처리 시작 — STATE.json 확인 후 다음 작업을 진행하세요.")"
   resume_note_quoted="$(shell_quote "$resume_note")"
