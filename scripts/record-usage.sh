@@ -90,6 +90,9 @@ if [ ! -f "$STATE_FILE" ]; then
     >"$STATE_FILE"
 fi
 
+RESOLVED_FOR_BY_MODEL="${RESOLVED_MODEL:-${MODEL:-unknown}}"
+[ -z "$RESOLVED_FOR_BY_MODEL" ] && RESOLVED_FOR_BY_MODEL="unknown"
+
 jq \
   --arg chapter "$CHAPTER_ID" \
   --arg role "$ROLE" \
@@ -98,6 +101,7 @@ jq \
   --argjson duration "$DURATION_SEC" \
   --argjson cost_usd "$COST_USD" \
   --arg model "$MODEL" \
+  --arg resolved_model "$RESOLVED_FOR_BY_MODEL" \
   '
   # top-level usage 보장
   .usage = (.usage // {total_tokens: 0, call_count: 0, session_started_at: $ts, last_call_at: $ts})
@@ -105,10 +109,23 @@ jq \
   | .usage.call_count = ((.usage.call_count // 0) + 1)
   | .usage.last_call_at = $ts
   | .usage.session_started_at = (.usage.session_started_at // $ts)
+  # 모델별 누적 (대시보드 시계열 차트용)
+  | .usage.by_model = (.usage.by_model // {})
+  | .usage.by_model[$resolved_model] = (
+      (.usage.by_model[$resolved_model] // {tokens: 0, calls: 0, cost_usd: 0})
+      | .tokens = (.tokens + $tokens)
+      | .calls = (.calls + 1)
+      | .cost_usd = (.cost_usd + $cost_usd)
+      | .last_call_at = $ts
+    )
   # 누적 USD (backwards compat 으로 cumulative_cost_usd 필드 재활성화)
   | .cumulative_cost_usd = ((.cumulative_cost_usd // 0) + $cost_usd)
   # chapter 단위 task usage 누적 — chapter/role 매칭되는 task만 갱신
   | .chapters = (.chapters // [])
+  # NOTE: 디렉토리 분기/atomic mv 타이밍으로 STATE.json이 빈 상태로 새로 만들어진 경우,
+  # chapter가 chapters에 없으면 자동으로 stub 추가해서 자료 손실을 막는다.
+  # director가 나중에 진짜 메타데이터로 보강해야 한다 (status, source_paths 등).
+  | (if any(.chapters[]; .id == $chapter) then . else .chapters += [{id: $chapter, num: null, title: "", status: "unknown", tasks: [{id: ($chapter + "-" + $role), chapter_id: $chapter, role: $role, status: "unknown"}], _stub_from_record_usage: true}] end)
   | .chapters = (.chapters | map(
       if .id == $chapter then
         .tasks = (.tasks // [])

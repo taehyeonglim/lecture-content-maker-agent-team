@@ -66,17 +66,39 @@ function formatDuration(seconds) {
   return `${h}시간 ${rm}분`;
 }
 
+// 모델별 색상 — 같은 모델은 세션 내내 동일 색상
+const MODEL_COLORS = {
+  "gpt-5.5":           "#2563eb",  // blue
+  "claude-sonnet-4-6": "#16a34a",  // green
+  "claude-opus-4-7":   "#dc2626",  // red
+  "gpt-image-2":       "#ea580c",  // orange
+  "unknown":           "#6b7280",  // gray
+};
+const COLOR_PALETTE = [
+  "#9333ea", "#db2777", "#0d9488", "#ca8a04", "#475569", "#65a30d",
+];
+function hashString(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function colorForModel(model) {
+  if (MODEL_COLORS[model]) return MODEL_COLORS[model];
+  return COLOR_PALETTE[hashString(model) % COLOR_PALETTE.length];
+}
+
 function appendUsageSample(state) {
   const u = state.usage || {};
+  const byModel = u.by_model || {};
   const ts = state.updated_at ? new Date(state.updated_at) : new Date();
-  // 직전 sample 과 동일한 timestamp 면 마지막 값만 갱신 (중복 점 방지)
+  // by_model 객체에서 model → tokens 누적치 추출
+  const modelTokens = {};
+  for (const [model, info] of Object.entries(byModel)) {
+    modelTokens[model] = toNumber(info && info.tokens);
+  }
+  const sample = { ts, modelTokens };
+  // 직전 sample 과 같은 timestamp 면 덮어쓰기
   const last = usageHistory[usageHistory.length - 1];
-  const sample = {
-    ts,
-    tokens: toNumber(u.total_tokens),
-    cost: toNumber(state.cumulative_cost_usd),
-    calls: toNumber(u.call_count),
-  };
   if (last && last.ts.getTime() === ts.getTime()) {
     usageHistory[usageHistory.length - 1] = sample;
   } else {
@@ -100,33 +122,7 @@ function initUsageChart() {
     type: "line",
     data: {
       labels: [],
-      datasets: [
-        {
-          label: "누적 토큰",
-          data: [],
-          borderColor: "#2563eb",
-          backgroundColor: "rgba(37, 99, 235, 0.12)",
-          yAxisID: "yTokens",
-          tension: 0.25,
-          fill: true,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          borderWidth: 2,
-        },
-        {
-          label: "누적 비용 (USD)",
-          data: [],
-          borderColor: "#f59e0b",
-          backgroundColor: "rgba(245, 158, 11, 0.0)",
-          borderDash: [5, 4],
-          yAxisID: "yCost",
-          tension: 0.25,
-          fill: false,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          borderWidth: 2,
-        },
-      ],
+      datasets: [],  // 모델 등장 시점에 동적으로 추가됨
     },
     options: {
       animation: false,
@@ -135,33 +131,17 @@ function initUsageChart() {
       interaction: { mode: "index", intersect: false },
       scales: {
         x: {
-          ticks: {
-            autoSkip: true,
-            maxTicksLimit: 8,
-            font: { size: 10 },
-          },
+          ticks: { autoSkip: true, maxTicksLimit: 8, font: { size: 10 } },
           grid: { display: false },
         },
-        yTokens: {
+        y: {
           type: "linear",
-          position: "left",
           beginAtZero: true,
           ticks: {
             callback: function (v) { return formatTokens(v); },
             font: { size: 10 },
           },
-          title: { display: true, text: "토큰", font: { size: 11 } },
-        },
-        yCost: {
-          type: "linear",
-          position: "right",
-          beginAtZero: true,
-          ticks: {
-            callback: function (v) { return "$" + Number(v).toFixed(2); },
-            font: { size: 10 },
-          },
-          title: { display: true, text: "USD", font: { size: 11 } },
-          grid: { drawOnChartArea: false },
+          title: { display: true, text: "누적 토큰", font: { size: 11 } },
         },
       },
       plugins: {
@@ -169,8 +149,7 @@ function initUsageChart() {
         tooltip: {
           callbacks: {
             label: function (item) {
-              if (item.dataset.yAxisID === "yCost") return `누적 비용: $${item.parsed.y.toFixed(4)}`;
-              return `누적 토큰: ${formatTokens(item.parsed.y)}`;
+              return `${item.dataset.label}: ${formatTokens(item.parsed.y)}`;
             },
           },
         },
@@ -181,9 +160,34 @@ function initUsageChart() {
 
 function updateUsageChart() {
   if (!usageChart) return;
+  // 1) usageHistory 의 모든 sample 에서 등장한 모델 집합
+  const modelSet = new Set();
+  for (const sample of usageHistory) {
+    for (const m of Object.keys(sample.modelTokens || {})) modelSet.add(m);
+  }
+  const models = Array.from(modelSet).sort();
+
+  // 2) 시간 라벨
   usageChart.data.labels = usageHistory.map((p) => fmtChartTime(p.ts));
-  usageChart.data.datasets[0].data = usageHistory.map((p) => p.tokens);
-  usageChart.data.datasets[1].data = usageHistory.map((p) => p.cost);
+
+  // 3) 모델별 dataset (서로 다른 색, 누적 토큰 시계열)
+  //    이전 sample 에 그 모델이 없었더라도 0 으로 plot (선이 0 에서부터 자라남)
+  usageChart.data.datasets = models.map((model) => {
+    const color = colorForModel(model);
+    return {
+      label: model,
+      data: usageHistory.map((sample) => toNumber((sample.modelTokens || {})[model])),
+      borderColor: color,
+      backgroundColor: color + "1f",  // 12% alpha
+      tension: 0.25,
+      fill: false,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      borderWidth: 2,
+      spanGaps: true,
+    };
+  });
+
   usageChart.update("none");
 }
 
