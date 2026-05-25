@@ -220,12 +220,15 @@ send_bootstrap() {
   # 워커 pane은 interactive Claude Code (sonnet) 세션을 부팅한다.
   # director가 send-keys로 자연어 prompt를 주입하면 그 Claude Code가 작업을 수행한다.
   # bare shell 아님 — 모든 워커는 Claude Code interactive UI 상태로 대기.
+  #
+  # 워커는 --dangerously-skip-permissions(=bypassPermissions) 로 부팅 — director가 prompt 보낼 때마다
+  # codex exec, kordoc, touch sentinel 등 Bash 호출이 permission prompt 없이 즉시 실행되어야 함.
+  # director는 PI가 직접 운영하는 pane이므로 이 함수 적용 대상 아님 (별도로 PI가 부팅).
   local pane_id="$1"
   local role="$2"
   local root_quoted="$3"
 
-  # 셸 셋업 후 claude 부팅. claude 가 interactive UI를 띄우고 prompt 입력 대기 상태가 된다.
-  tmux send-keys -t "$pane_id" "cd ${root_quoted}; if [ -f .env ]; then set -a; source .env; set +a; fi; clear; printf '%s\n' '[${role}] booting Claude Code (sonnet)...'; claude" C-m
+  tmux send-keys -t "$pane_id" "cd ${root_quoted}; if [ -f .env ]; then set -a; source .env; set +a; fi; clear; printf '%s\n' '[${role}] booting Claude Code (sonnet, bypass mode)...'; claude --dangerously-skip-permissions" C-m
 }
 
 create_session() {
@@ -249,6 +252,9 @@ create_session() {
   window_id="$(tmux display-message -p -t "$SESSION_NAME" '#{window_id}')"
   director_pane="$(tmux display-message -p -t "$window_id" '#{pane_id}')"
   tmux set-option -t "$SESSION_NAME" pane-border-status top >/dev/null
+  # @label pane-specific 옵션을 표시 (Claude Code 가 title을 "✳ Claude Code"로 덮어써도
+  # @label 은 우리가 set 한 값을 유지). 없으면 pane_title 로 fallback.
+  tmux set-option -t "$SESSION_NAME" pane-border-format ' #[bold]#{?@label,#{@label},#{pane_title}}#[default] ' >/dev/null
 
   # 레이아웃: director(좌측, ~35%) | 우측(workers 2x2 그리드 + monitor 하단)
   #
@@ -294,6 +300,14 @@ create_session() {
   tmux set-option -p -t "$designer_pane" '@role' 'designer'
   tmux set-option -p -t "$developer_pane" '@role' 'developer'
   tmux set-option -p -t "$monitor_pane" '@role' 'monitor'
+
+  # 사용자 표시용 라벨 (@label) — pane-border-format 이 이걸 우선 표시. Claude Code title 덮어쓰기 영향 없음.
+  tmux set-option -p -t "$director_pane" '@label' 'Director'
+  tmux set-option -p -t "$decomposer_pane" '@label' 'Decomposer'
+  tmux set-option -p -t "$composer_pane" '@label' 'Composer'
+  tmux set-option -p -t "$designer_pane" '@label' 'Designer'
+  tmux set-option -p -t "$developer_pane" '@label' 'Developer'
+  tmux set-option -p -t "$monitor_pane" '@label' 'STATE.json watch'
 
   director_message_quoted="$(shell_quote "${chapter_id} 처리 시작 — STATE.json 확인 후 다음 작업을 진행하세요.")"
   resume_note_quoted="$(shell_quote "$resume_note")"
