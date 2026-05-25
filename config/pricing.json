@@ -12,12 +12,16 @@
     "claude-sonnet-4-6": {
       "input_per_1m": 3.00,
       "output_per_1m": 15.00,
-      "_note": "Phase 1 워커 4개 (decomposer/composer/designer/developer)"
+      "cache_creation_per_1m": 3.75,
+      "cached_input_per_1m": 0.30,
+      "_note": "Phase 1 워커 4개. Anthropic cache: write 1.25x input, read 0.1x input"
     },
     "claude-opus-4-7": {
       "input_per_1m": 5.00,
       "output_per_1m": 25.00,
-      "_note": "director"
+      "cache_creation_per_1m": 6.25,
+      "cached_input_per_1m": 0.50,
+      "_note": "director. cache: write 1.25x, read 0.1x"
     },
     "gpt-5.5": {
       "input_per_1m": 5.00,

@@ -321,7 +321,10 @@ create_session() {
   send_bootstrap "$composer_pane" "composer" "$root_quoted"
   send_bootstrap "$designer_pane" "designer" "$root_quoted"
   send_bootstrap "$developer_pane" "developer" "$root_quoted"
-  tmux send-keys -t "$monitor_pane" "cd ${root_quoted}; while true; do clear; date; if [ -f STATE.json ]; then jq . STATE.json; else echo 'STATE.json not found'; fi; sleep 5; done" C-m
+  # Monitor pane: 5초마다
+  #   1) aggregate-claude-usage.sh 호출 → ~/.claude/projects/*.jsonl 의 Opus/Sonnet 토큰을 STATE.json 에 반영
+  #   2) STATE.json 의 핵심 요약을 화면에 표시
+  tmux send-keys -t "$monitor_pane" "cd ${root_quoted}; while true; do clear; date; bash scripts/aggregate-claude-usage.sh 2>/dev/null || true; if [ -f STATE.json ]; then jq '{course, overall_progress, active_agents, cumulative_cost_usd, usage: {total_tokens: .usage.total_tokens, call_count: .usage.call_count, by_model: (.usage.by_model | to_entries | map({(.key): {tokens: .value.tokens, calls: .value.calls, cost_usd: .value.cost_usd}}) | add)}}' STATE.json; else echo 'STATE.json not found'; fi; sleep 5; done" C-m
   tmux select-pane -t "$director_pane"
 }
 
