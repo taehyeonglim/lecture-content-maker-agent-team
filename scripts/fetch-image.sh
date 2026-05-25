@@ -1,14 +1,29 @@
 #!/usr/bin/env bash
+# PI 정책 2026-05-26: 모든 이미지 자료는 gpt-image-gen, 인물 사진만 Wikimedia.
+# preferred_source 기본값은 gpt-image-gen. 인물 사진 fetch 시에만 'wiki' 전달.
+
 set -euo pipefail
 
-if [[ $# -lt 2 || $# -gt 3 ]]; then
-  echo "Usage: bash scripts/fetch-image.sh <query> <out_dir> [<filename>]" >&2
+if [[ $# -lt 2 || $# -gt 4 ]]; then
+  cat >&2 <<USAGE
+Usage: bash scripts/fetch-image.sh <query> <out_dir> [<filename>] [<preferred_source>]
+  preferred_source = gpt-image-gen (default) | wiki
+
+  gpt-image-gen : OpenAI Images API 로 생성. 다이어그램·차트·일러스트·분위기 사진용.
+  wiki          : Wikimedia Commons 검색 우선, 실패 시 gpt-image-gen 폴백. 인물 사진 전용.
+USAGE
   exit 2
 fi
 
 QUERY="$1"
 OUT_DIR="$2"
 REQUESTED_FILENAME="${3:-}"
+PREFERRED_SOURCE="${4:-gpt-image-gen}"
+
+if [[ "$PREFERRED_SOURCE" != "gpt-image-gen" && "$PREFERRED_SOURCE" != "wiki" ]]; then
+  echo "Invalid preferred_source: $PREFERRED_SOURCE (must be gpt-image-gen or wiki)" >&2
+  exit 2
+fi
 
 if [[ -f .env ]]; then
   set -a
@@ -233,21 +248,26 @@ require_command base64
 
 mkdir -p "$OUT_DIR"
 
-wiki_response=""
-if wiki_response="$(search_wikimedia)"; then
-  while IFS= read -r candidate; do
-    [[ -z "$candidate" ]] && continue
+# preferred_source=gpt-image-gen (기본): Wikimedia 건너뛰고 바로 OpenAI 호출.
+# preferred_source=wiki (인물 사진): Wikimedia 우선, 실패 시 OpenAI 폴백.
+if [[ "$PREFERRED_SOURCE" == "wiki" ]]; then
+  wiki_response=""
+  if wiki_response="$(search_wikimedia)"; then
+    while IFS= read -r candidate; do
+      [[ -z "$candidate" ]] && continue
 
-    image_url="$(jq -r '.url' <<<"$candidate")"
-    filename="$(resolve_filename "$image_url")"
-    output_path="${OUT_DIR%/}/$filename"
-    meta_path="${output_path}.meta.json"
+      image_url="$(jq -r '.url' <<<"$candidate")"
+      filename="$(resolve_filename "$image_url")"
+      output_path="${OUT_DIR%/}/$filename"
+      meta_path="${output_path}.meta.json"
 
-    if retry_download "$output_path" --user-agent "$WIKIMEDIA_USER_AGENT" "$image_url"; then
-      write_wiki_meta "$meta_path" "$candidate"
-      exit 0
-    fi
-  done < <(extract_candidates <<<"$wiki_response")
+      if retry_download "$output_path" --user-agent "$WIKIMEDIA_USER_AGENT" "$image_url"; then
+        write_wiki_meta "$meta_path" "$candidate"
+        exit 0
+      fi
+    done < <(extract_candidates <<<"$wiki_response")
+  fi
+  echo "Wikimedia 검색·다운로드 실패 — gpt-image-gen 폴백 시도." >&2
 fi
 
 generate_with_openai

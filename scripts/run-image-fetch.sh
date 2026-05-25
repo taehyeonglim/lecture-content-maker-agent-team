@@ -125,17 +125,26 @@ for req in "${REQ_LINES[@]}"; do
   ID="$(echo "$req" | jq -r .request_id)"
   ALT="$(echo "$req" | jq -r .alt_text)"
   REQ_TEXT="$(echo "$req" | jq -r .requirements)"
-  QUERY="$ALT"
+  PREF="$(echo "$req" | jq -r '.preferred_source // "gpt-image-gen"')"
   OUTFILE="${ID}.png"
+
+  # preferred_source 정규화 (designer 가 "gpt-image-gen" 또는 "gpt_image_gen" 또는 "wiki" 표기)
+  case "$(echo "$PREF" | tr '[:upper:]' '[:lower:]')" in
+    wiki|wikimedia)        SRC_ARG="wiki" ; QUERY="$ALT"      ;;  # 인물 사진: alt_text 단답
+    gpt-image-gen|gpt_image_gen|openai|"") SRC_ARG="gpt-image-gen" ; QUERY="$REQ_TEXT" ;;  # 다이어그램: requirements 자세히
+    *) echo "   ? unknown preferred_source '$PREF' — gpt-image-gen 으로 강제" >&2
+       SRC_ARG="gpt-image-gen" ; QUERY="$REQ_TEXT" ;;
+  esac
+
   # 이미 존재 + 적절한 크기면 skip (재실행 시 시간 절약)
   if [ -f "$OUT_DIR/$OUTFILE" ] && [ "$(stat -f%z "$OUT_DIR/$OUTFILE" 2>/dev/null || echo 0)" -gt 1000 ]; then
     echo "⏭  [${INDEX}/${TOTAL}] ${ID} — 이미 존재 (skip)" >&2
     SUCCESS=$((SUCCESS + 1))
     continue
   fi
-  echo "🔍 [${INDEX}/${TOTAL}] ${ID} — ${QUERY:0:60}..." >&2
+  echo "🔍 [${INDEX}/${TOTAL}] ${ID} (${SRC_ARG}) — ${QUERY:0:60}..." >&2
   # /dev/null < 로 stdin 차단 → codex exec 의 stdin 간섭 방지
-  if bash scripts/fetch-image.sh "$QUERY" "$OUT_DIR/" "$OUTFILE" </dev/null 2>/dev/null; then
+  if bash scripts/fetch-image.sh "$QUERY" "$OUT_DIR/" "$OUTFILE" "$SRC_ARG" </dev/null 2>/dev/null; then
     SUCCESS=$((SUCCESS + 1))
     META="$OUT_DIR/${OUTFILE}.meta.json"
     if [ -f "$META" ]; then
