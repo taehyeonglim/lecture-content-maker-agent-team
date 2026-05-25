@@ -85,6 +85,12 @@ else:
 write_state_atomic(task.status="running", active_agents += role)
 send_worker_task(task)
 
+# ⚠ designer 완료 직후 반드시 이미지 batch 트리거 (워크플로 누락 방지)
+if next_step == "designed" and task.status == "done":
+  bash scripts/run-image-fetch.sh <chapter_id>
+  # → DESIGN.md 의 Image Fetch Requests 표를 파싱해 14장 일괄 생성 (Wikimedia + codex fallback)
+  # → 완료 후 developer 단계로 진입 (deck.html 이 실제 이미지 사용 가능)
+
 while true:
   output = tmux_capture_pane(role)
   if contains(output, "# AGENT_DONE_SIGNAL: " + task.id):

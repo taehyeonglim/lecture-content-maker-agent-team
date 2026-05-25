@@ -181,13 +181,67 @@ write_wiki_meta() {
     > "$meta_path"
 }
 
+generate_with_codex() {
+  # codex exec 에게 이미지 생성을 위임. codex 는 적절한 도구
+  # (matplotlib/graphviz/PIL/SVG)를 선택해 코드 작성 후 실행, PNG 저장.
+  # OPENAI_API_KEY 불필요 — codex CLI OAuth 만으로 동작. 다이어그램/표/차트류에 적합.
+  local filename output_path meta_path codex_output
+  filename="$REQUESTED_FILENAME"
+  if [[ -z "$filename" ]]; then
+    filename="$(slugify "$QUERY").png"
+  fi
+  output_path="${OUT_DIR%/}/$filename"
+  meta_path="${output_path}.meta.json"
+
+  # codex 가 일관된 결과 위치에 저장하도록 절대 경로 지정
+  local abs_output
+  abs_output="$(cd "$(dirname "$output_path")" && pwd)/$(basename "$output_path")"
+
+  local codex_prompt
+  codex_prompt="다음 시각자료를 PNG 파일로 만들어 ${abs_output} 에 저장하라.
+
+설명: ${QUERY}
+
+요구사항:
+- 1024×768 또는 1280×720 권장 (16:9 슬라이드 배경에 들어갈 수 있는 크기)
+- 흰 배경, 한국어 텍스트는 시스템 한글 폰트 활용 (matplotlib rcParams 또는 PIL ImageFont)
+- 가능한 도구 우선순위:
+  1) 단순 다이어그램/벤다이어그램/원형/타임라인/매트릭스/표 → matplotlib + 한글 폰트 ('AppleGothic' on macOS)
+  2) 노드-엣지 다이어그램 → graphviz (dot)
+  3) 흐름도/방사형 → matplotlib patches 또는 plantuml/mermaid
+  4) 이미 라이브러리가 부족하면 PIL/Pillow 로 직접 도형 + 텍스트 그림
+- 사실적 사진(예: 교실 장면)은 제외 — 추상 도형/도식만. 사진 요구사항이면 placeholder 박스 + 라벨로 대체.
+- 종속성 미설치 시 pip install (PIL/Pillow, matplotlib, graphviz 정도는 환경에 있을 것)
+- 완료 후 ${abs_output} 파일이 존재하고 크기 > 0 이어야 함
+
+마지막에 단 한 줄 'OK ${abs_output}' 만 출력하라 (다른 메시지 없이)."
+
+  if codex_output="$(codex exec --model gpt-5.5 \
+                      -c model_reasoning_effort=medium \
+                      -c sandbox_mode="workspace-write" \
+                      "$codex_prompt" 2>&1)"; then
+    if [[ -f "$output_path" && -s "$output_path" ]]; then
+      jq -n \
+        --arg source "codex-generated" \
+        --arg license "AI-generated (codex matplotlib/graphviz/PIL)" \
+        --arg prompt "$QUERY" \
+        '{source: $source, license: $license, prompt: $prompt}' \
+        > "$meta_path"
+      return 0
+    fi
+  fi
+  echo "codex generation failed for query: ${QUERY:0:50}..." >&2
+  return 1
+}
+
 generate_with_openai() {
   local filename output_path meta_path api_key response image_b64
   api_key="${GPT_IMAGE_GEN_KEY:-${OPENAI_API_KEY:-}}"
 
   if [[ -z "$api_key" ]]; then
-    echo "No Wikimedia candidate found and GPT_IMAGE_GEN_KEY/OPENAI_API_KEY is not set." >&2
-    return 1
+    # OpenAI key 없으면 codex 로 위임
+    generate_with_codex
+    return $?
   fi
 
   filename="$REQUESTED_FILENAME"

@@ -8,6 +8,16 @@ color: pink
 ## 실행 환경 (중요)
 이 에이전트는 **tmux pane 안에서 interactive `claude` (Claude Code Sonnet) 세션**으로 실행된다. director가 send-keys로 prompt를 주입하면 받아 처리한다. 시각 디자인은 Claude 자체 추론으로 충분하므로 codex exec는 호출하지 않는다(필요 시 prompt에서 explicit하게 지시될 때만).
 
+### DESIGN.md 작성 후 필수 — 이미지 자동 수급 트리거
+DESIGN.md 의 `## Image Fetch Requests` 표 작성을 마치면 **반드시** 다음 명령으로 일괄 이미지 생성을 트리거한다 (워크플로 누락 방지):
+```bash
+bash scripts/run-image-fetch.sh ${CHAPTER_ID}
+```
+이 스크립트가 표를 파싱해 각 행마다 `scripts/fetch-image.sh` 를 호출:
+1) Wikimedia Commons 우선 (license CC BY / CC BY-SA / Public Domain)
+2) 매치 실패 시 codex exec 위임 (matplotlib/graphviz/PIL/SVG 로 다이어그램·차트 코드 생성)
+실행 시간: 챕터당 약 10-15분 (이미지 14장 기준).
+
 종료 시 sentinel:
 ```bash
 touch /tmp/lecture-team-sentinel-${TASK_ID}.done
