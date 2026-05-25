@@ -12,15 +12,14 @@ Pane names: director, decomposer, composer, designer, developer
 USAGE
 }
 
-pane_index() {
-  case "$1" in
-    director) echo "0" ;;
-    decomposer) echo "1" ;;
-    composer) echo "2" ;;
-    designer) echo "3" ;;
-    developer) echo "4" ;;
+pane_id_for() {
+  local title="$1"
+  case "$title" in
+    director|decomposer|composer|designer|developer) ;;
     *) return 1 ;;
   esac
+  tmux list-panes -t "$SESSION_NAME" -a -F '#{pane_id}' \
+    -f "#{==:#{pane_title},${title}}" | head -n1
 }
 
 validate_safe_command() {
@@ -30,23 +29,22 @@ validate_safe_command() {
   fi
 }
 
-wait_for_sentinel() {
-  local target="$1"
-  local sentinel="$2"
-  local timeout_seconds="$3"
+wait_for_sentinel_file() {
+  local sentinel_file="$1"
+  local timeout_seconds="$2"
   local start_ts
   local now_ts
 
   start_ts="$(date +%s)"
 
   while true; do
-    if tmux capture-pane -t "$target" -p | grep -Fq "$sentinel"; then
+    if [ -f "$sentinel_file" ]; then
       return 0
     fi
 
     now_ts="$(date +%s)"
     if [ "$((now_ts - start_ts))" -ge "$timeout_seconds" ]; then
-      echo "ERROR: timed out after ${timeout_seconds}s waiting for sentinel: ${sentinel}" >&2
+      echo "ERROR: timed out after ${timeout_seconds}s waiting for sentinel file: ${sentinel_file}" >&2
       echo "Hint: record this timeout in STATE.json using the atomic write pattern (STATE.json.tmp -> STATE.json)." >&2
       return 1
     fi
@@ -100,7 +98,6 @@ main() {
   local pane_name="$1"
   local task_id="$2"
   local command="$3"
-  local pane_idx
   local target
   local sentinel
 
@@ -114,12 +111,6 @@ main() {
     exit 1
   fi
 
-  if ! pane_idx="$(pane_index "$pane_name")"; then
-    echo "ERROR: unknown pane_name: ${pane_name}" >&2
-    usage
-    exit 1
-  fi
-
   validate_safe_command "$command"
 
   if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
@@ -127,17 +118,19 @@ main() {
     exit 1
   fi
 
-  target="${SESSION_NAME}:0.${pane_idx}"
-  if ! tmux display-message -p -t "$target" '#{pane_id}' >/dev/null 2>&1; then
-    echo "ERROR: tmux pane target does not exist: ${target}" >&2
+  if ! target="$(pane_id_for "$pane_name")" || [ -z "$target" ]; then
+    echo "ERROR: tmux pane with title '${pane_name}' not found in session '${SESSION_NAME}'." >&2
+    echo "Hint: start-session.sh sets pane titles via 'tmux select-pane -T'. Verify titles with: tmux list-panes -t ${SESSION_NAME} -a -F '#{pane_title}'" >&2
     exit 1
   fi
 
   sentinel="# AGENT_DONE_SIGNAL: ${task_id}"
-  tmux send-keys -t "$target" "${command}; echo '${sentinel}'" Enter
+  sentinel_file="/tmp/lecture-team-sentinel-${task_id}.done"
+  rm -f "$sentinel_file" || true
+  tmux send-keys -t "$target" "${command}; touch '${sentinel_file}'; echo '${sentinel}'" Enter
 
   if [ "$wait_mode" = "true" ]; then
-    wait_for_sentinel "$target" "$sentinel" "$timeout_seconds"
+    wait_for_sentinel_file "$sentinel_file" "$timeout_seconds"
   fi
 }
 
