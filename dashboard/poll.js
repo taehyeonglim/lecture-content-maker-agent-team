@@ -8,6 +8,7 @@ let usageChart = null;
 let previewChapterId = null;  // 현재 미리보기 중인 챕터 id
 let previewLastMtime = null;  // 직전 deck.html 의 Last-Modified
 let previewReloadTimer = null;
+let previewResizeObserver = null;
 
 // status → 한글 라벨 (시각은 CSS .status-pill .status-<key> 에서 처리)
 const STATUS_LABELS = {
@@ -587,6 +588,50 @@ function setupPreviewControls() {
   }
 }
 
+/* ─────────── 16:9 비율 자동 fit (ResizeObserver) ─────────── */
+
+const PREVIEW_TARGET_RATIO = 16 / 9;
+
+function fitDeckPreviewFrame() {
+  const stage = getElement("preview-stage");
+  const frame = getElement("preview-frame");
+  if (!stage || !frame) return;
+
+  // stage 내부 가용 공간 = clientWidth/Height (padding 자동 제외, border 별도)
+  const availW = Math.max(0, stage.clientWidth - 8);   // p-1(4px) 양쪽 + border 여유
+  const availH = Math.max(0, stage.clientHeight - 8);
+  if (availW === 0 || availH === 0) return;
+
+  const availRatio = availW / availH;
+
+  let w, h;
+  if (availRatio > PREVIEW_TARGET_RATIO) {
+    // 가용 영역이 16:9 보다 가로로 더 김 → 높이 한계 → 폭 자동
+    h = availH;
+    w = h * PREVIEW_TARGET_RATIO;
+  } else {
+    // 가용 영역이 16:9 보다 세로로 더 김 → 폭 한계 → 높이 자동
+    w = availW;
+    h = w / PREVIEW_TARGET_RATIO;
+  }
+
+  // px 단위로 명시 설정 (CSS aspect-ratio + max-* 만으로는 둘 다 cap 일 때 보장 안 됨)
+  frame.style.width = `${Math.floor(w)}px`;
+  frame.style.height = `${Math.floor(h)}px`;
+  frame.style.maxWidth = "none";
+  frame.style.maxHeight = "none";
+}
+
+function startPreviewSizing() {
+  if (previewResizeObserver) return;
+  const stage = getElement("preview-stage");
+  if (!stage) return;
+  fitDeckPreviewFrame();
+  previewResizeObserver = new ResizeObserver(() => fitDeckPreviewFrame());
+  previewResizeObserver.observe(stage);
+  window.addEventListener("resize", fitDeckPreviewFrame);
+}
+
 function renderCompletedDecks(chapters) {
   const container = getElement("completed-decks");
   if (!container) return;
@@ -778,6 +823,7 @@ function handleVisibilityChange() {
 window.addEventListener("load", () => {
   initUsageChart();
   setupPreviewControls();
+  startPreviewSizing();
   startPreviewReload();
   pollState();
   startPolling();

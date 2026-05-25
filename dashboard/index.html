@@ -94,17 +94,24 @@
                 </a>
               </div>
             </div>
-            <div class="relative min-h-0 flex-1 overflow-hidden rounded-md"
-                 style="background: white; border: 1px solid var(--border-strong)">
-              <iframe id="deck-preview" src="about:blank"
-                      class="absolute inset-0 h-full w-full"
-                      title="교안 미리보기"></iframe>
-              <div id="preview-empty"
-                   class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center"
-                   style="background: var(--surface); color: var(--text-muted)">
-                <p class="text-sm font-medium">교안 미리보기</p>
-                <p class="text-[11px]">developer 가 deck.html 을 빌드하면 자동 표시됩니다</p>
-                <p class="text-[10px]" style="color: var(--text-dim)">5초마다 mtime 폴링 · 변경 시 iframe reload</p>
+            <!-- preview-stage = 가용 영역 (letterbox 배경), preview-frame = 16:9 비율 박스 (JS가 사이즈 계산) -->
+            <div id="preview-stage"
+                 class="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md p-1"
+                 style="background: var(--surface-muted); border: 1px solid var(--border-strong)">
+              <div id="preview-frame"
+                   class="relative overflow-hidden rounded-sm shadow-lg"
+                   style="background: white; aspect-ratio: 16 / 9; width: 100%; max-height: 100%">
+                <iframe id="deck-preview" src="about:blank"
+                        class="absolute inset-0 block h-full w-full"
+                        style="border: 0"
+                        title="교안 미리보기"></iframe>
+                <div id="preview-empty"
+                     class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center"
+                     style="background: var(--surface); color: var(--text-muted)">
+                  <p class="text-sm font-medium">교안 미리보기 · 16:9</p>
+                  <p class="text-[11px]">developer 가 deck.html 을 빌드하면 자동 표시됩니다</p>
+                  <p class="text-[10px]" style="color: var(--text-dim)">5초마다 mtime 폴링 · 변경 시 iframe reload</p>
+                </div>
               </div>
             </div>
           </section>
