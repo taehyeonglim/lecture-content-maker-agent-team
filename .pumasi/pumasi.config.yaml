@@ -1,0 +1,483 @@
+pumasi:
+  defaults:
+    command: "codex exec --dangerously-bypass-approvals-and-sandbox --model gpt-5.5 -c model_reasoning_effort=high"
+    emoji: "🤖"
+
+  # Round 2: 3 dashboard + 4 에이전트 prompts + 3 reviewer round prompts = 10 병렬 태스크
+  tasks:
+    # ───────────────────────────────────────────────────────────────────
+    # 그룹 A: 로컬 정적 대시보드 3개 파일
+    # ───────────────────────────────────────────────────────────────────
+
+    - name: dashboard-index
+      instruction: |
+        먼저 PRD/02_DATA_MODEL.md (SystemState 스키마) + PRD/04_PROJECT_SPEC.md (대시보드 행) 를 읽어라.
+
+        dashboard/index.html 을 작성하라.
+
+        ## 요구사항
+        1. 단일 파일 정적 HTML (외부 빌드 없음).
+        2. Tailwind CSS CDN 사용: `<script src="https://cdn.tailwindcss.com"></script>`
+        3. `<title>` 에 "lecture-content-maker — 진행상황" 포함.
+        4. UTF-8, 한국어 표시.
+        5. 화면 구성 (data-driven, poll.js 가 채움):
+           - 헤더: 코스명 (#course-name), 전체 진행률 바 (#overall-progress), 누적 비용 (#cumulative-cost)
+           - 챕터 카드 그리드 (#chapter-grid) — Phase 1 은 1챕터지만 12-13챕터로 확장 가능
+             각 카드: chapter num+title, status badge, 4개 task 진행도 (decomposer/composer/designer/developer), 각 task 의 review 라운드 표시
+           - 활성 에이전트 리스트 (#active-agents)
+           - 최근 이벤트 로그 (#recent-events) — 최근 10개
+           - 마지막 갱신 시간 (#updated-at)
+        6. <link rel="stylesheet" href="style.css">
+        7. <script src="poll.js"></script>
+        8. Mobile-friendly 는 nice-to-have (1024x768 데스크톱 우선)
+        9. 다크 모드 (Tailwind dark theme 기반 색상)
+        10. 색상 컨벤션:
+            - queued: gray, running: blue, review: yellow, done: green, failed: red
+
+        ## 제약사항
+        - 정적 HTML 만. 외부 빌드 단계 없음.
+        - JS 는 poll.js 로 분리, HTML 안에 인라인 스크립트는 최소화.
+        - CSP/보안: localhost 파일이지만 inline JS 의 자유 사용은 피한다.
+
+      gates:
+        - name: "파일 존재"
+          command: "[ -f /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/index.html ]"
+        - name: "Tailwind CDN"
+          command: "grep -q 'cdn.tailwindcss.com' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/index.html"
+        - name: "poll.js 로드"
+          command: "grep -q 'poll.js' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/index.html"
+        - name: "주요 ID 존재"
+          command: "grep -q 'overall-progress' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/index.html && grep -q 'chapter-grid' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/index.html && grep -q 'cumulative-cost' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/index.html"
+        - name: "UTF-8 + 한국어 lang"
+          command: "grep -q 'utf-8' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/index.html && grep -q 'lang=\"ko\"' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/index.html"
+
+    - name: dashboard-poll
+      instruction: |
+        먼저 PRD/02_DATA_MODEL.md (STATE.json 스키마) 를 읽어라.
+
+        dashboard/poll.js 를 작성하라.
+
+        ## 요구사항
+        1. vanilla JS (외부 라이브러리 없음).
+        2. STATE.json 을 5초마다 fetch (`fetch('../STATE.json')` — 정적 서버 기준 상대 경로).
+        3. 응답 JSON 을 파싱해 DOM 업데이트:
+           - #course-name, #overall-progress (% 바 fill), #cumulative-cost ($X.XX)
+           - #chapter-grid: 각 chapter 를 카드로 렌더링. 카드 안에 4 task (role 별 progress + reviews_passed)
+           - #active-agents: ["designer:chapter-01", ...] 배열을 칩으로 표시
+           - #recent-events: 최근 10개를 시간 역순으로 표시
+           - #updated-at: ISO 8601 을 한국어 로컬 시각으로 (Intl.DateTimeFormat 사용)
+        4. STATE.json 미존재 시 (404 / 파싱 실패) 친절한 안내 메시지 표시.
+        5. 색상 매핑 (status enum → Tailwind 클래스 또는 인라인):
+           - queued: gray, running: blue, review: yellow, done: green, failed: red
+        6. setInterval 로 5초마다 갱신. 페이지 가시성 hidden 시 폴링 중단 (옵션, document.visibilityState 활용).
+        7. window onload 시 즉시 1회 호출.
+
+        ## 제약사항
+        - 외부 의존성 없음. ES2020+ 문법 가능.
+        - HTML 인젝션 방지: textContent / DOM API 만 사용 (innerHTML 으로 사용자 입력 직접 주입 금지).
+        - 한국어 텍스트 안전 처리.
+
+      gates:
+        - name: "파일 존재"
+          command: "[ -f /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/poll.js ]"
+        - name: "fetch 사용"
+          command: "grep -q 'fetch' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/poll.js"
+        - name: "STATE.json 참조"
+          command: "grep -q 'STATE.json' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/poll.js"
+        - name: "setInterval 또는 setTimeout"
+          command: "grep -qE 'setInterval|setTimeout' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/poll.js"
+        - name: "5000ms 또는 5초 폴링"
+          command: "grep -qE '5000|5 ?\\* ?1000' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/poll.js"
+
+    - name: dashboard-style
+      instruction: |
+        dashboard/style.css 를 작성하라.
+
+        ## 요구사항
+        1. Tailwind CDN 으로 대부분 처리되지만, custom 보조 스타일만 여기 작성.
+        2. 한국어 폰트 스택 명시: `'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif`
+        3. 카드 hover 효과, 진행률 바 transition 등 micro-interaction.
+        4. 다크 모드 색상 변수 (CSS variables) 정의.
+        5. status 별 색상 클래스 (status-queued, status-running 등) — Tailwind 클래스로 안 되는 디테일만.
+        6. 최소 너비 1024px 가정.
+        7. 파일 30-150 줄 권장 (너무 길지 않게).
+
+        ## 제약사항
+        - !important 남용 금지.
+        - 외부 폰트 import 는 옵션 (CDN 폰트 한 줄만 허용).
+
+      gates:
+        - name: "파일 존재"
+          command: "[ -f /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/style.css ]"
+        - name: "한국어 폰트 스택"
+          command: "grep -qE 'Pretendard|Noto Sans KR|Apple SD Gothic' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/style.css"
+        - name: "최소 줄 수"
+          command: "[ $(wc -l < /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/dashboard/style.css) -ge 20 ]"
+
+    # ───────────────────────────────────────────────────────────────────
+    # 그룹 B: 4 에이전트 시스템 프롬프트 (prompts/<role>/system.md)
+    # ───────────────────────────────────────────────────────────────────
+
+    - name: prompt-decomposer-system
+      instruction: |
+        먼저 PRD/01_PRD.md, PRD/02_DATA_MODEL.md, PRD/04_PROJECT_SPEC.md, spike/RESULTS.md 를 읽어라.
+        또한 .claude/agents/decomposer.md 를 읽어 일관성을 맞춰라.
+
+        prompts/decomposer/system.md 를 작성하라.
+
+        ## 목적
+        이 파일은 codex CLI 의 system prompt 로 사용된다. decomposer 에이전트가 한 번 호출될 때 이 prompt 와 작업 입력(파일 목록)을 함께 받는다.
+
+        ## 작성 가이드
+        - 1인칭 어조 ("당신은 ..." 또는 "I am ...") 가 아닌 명령형/규약형으로 작성.
+        - 출력 형식: 단일 markdown 파일 decomposed.md 의 본문만 (메타데이터/주석/설명 텍스트 없이).
+        - 한국어 문서 처리 컨벤션:
+            - HWP/HWPX/PPTX/PDF/DOCX → kordoc 통해 .md 추출
+            - 한자는 한국어로 자동 음차 + 괄호 안 원문 ("教授(교수)")
+            - OCR 신뢰도 낮은 PDF 페이지는 [텍스트 품질 의심] 마커
+        - 섹션 구조 보존: 원본의 슬라이드/주제 단위를 `## 섹션명` 으로 매핑
+        - 표/그림 자리표시: `[표 N-1: 설명]`, `[그림 N-1: 설명]` 형태 (실제 이미지/표 데이터는 별도)
+        - 인용 처리: 출처 표기는 본문에 `(저자, 연도)`, 상세는 별도 인용 리스트 섹션
+        - 모든 외부 명령은 워크플로에 명시 (예: `npx kordoc ...`)
+
+        ## 출력 규약 (codex exec 의 stdout 으로 떨어지므로)
+        파일 끝에 항상:
+        ```
+        ---
+        # AGENT_DONE_SIGNAL: <task_id>
+        ```
+        (이는 codex 출력이 cmd 파이프로 파일에 저장될 때 director 가 감지)
+
+        ## 제약사항
+        - Previous_lecture_content/ 의 원본 파일을 절대 수정/삭제하지 말 것
+        - 한국어 자연스러움 (직역체/번역체 회피)
+        - 분량 (system.md 자체) 1500-3000자 권장
+
+      gates:
+        - name: "파일 존재"
+          command: "[ -f /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/decomposer/system.md ]"
+        - name: "최소 길이"
+          command: "[ $(wc -c < /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/decomposer/system.md) -gt 800 ]"
+        - name: "kordoc 명시"
+          command: "grep -q 'kordoc' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/decomposer/system.md"
+        - name: "AGENT_DONE_SIGNAL"
+          command: "grep -q 'AGENT_DONE_SIGNAL' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/decomposer/system.md"
+
+    - name: prompt-composer-system
+      instruction: |
+        먼저 PRD/01_PRD.md, PRD/02_DATA_MODEL.md, PRD/04_PROJECT_SPEC.md 를 읽어라.
+        .claude/agents/composer.md 를 읽어 일관성 유지.
+
+        prompts/composer/system.md 를 작성하라.
+
+        ## 목적
+        composer 에이전트의 system prompt. decomposed.md 와 학지사 목차 .hwp 파싱 결과를 입력으로 받아 한 챕터의 composed.md (장-절-항 줄글) 를 생성.
+
+        ## 작성 가이드
+        - 명령형/규약형 어조.
+        - 출력: 단일 markdown 파일 composed.md 본문.
+        - 마크다운 위계 엄격:
+            - `# 제1장 <챕터 제목>` (1개)
+            - `## 제1절 <소제목>` (3-6개)
+            - `### 1. <항>` (절당 2-5개)
+            - 본문은 줄글 (불릿 남발 금지)
+        - 챕터 수 제약: 12 기본, 13 허용, 14+ 절대 불가
+        - 학지사 목차 cross-reference 가이드:
+            - 목차의 장/절 번호와 매핑
+            - 매핑 결과를 본문에 명시 (예: "본 장은 학지사 목차 제1장 '교육공학의 정의'에 대응한다." — 단 주석은 본문에 자연스럽게)
+        - 표/그림 자리표시 보존: `[그림 1-1: ADDIE 모형]`, `[표 1-1: ...]`
+        - 인용 처리: 본문은 `(Mayer, 2009)`, 상세 메타데이터는 별도 출력 파일 citations.json 에 CSL JSON 으로 저장 (이 system prompt 가 directly write 하지는 않지만 정보를 어디 모아둘지 명시)
+        - 추후 전공교재로 업그레이드 가능한 줄글 형태 (학문적, 객관적, 자연스러운 한국어)
+
+        ## 출력 규약
+        파일 끝에:
+        ```
+        ---
+        # AGENT_DONE_SIGNAL: <task_id>
+        ```
+
+        ## 제약사항
+        - 12/13 챕터 제약 엄수
+        - 줄글 권장 (목록보다 문단)
+        - 한국어 자연스러움
+        - 분량 1500-3000자
+
+      gates:
+        - name: "파일 존재"
+          command: "[ -f /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/composer/system.md ]"
+        - name: "최소 길이"
+          command: "[ $(wc -c < /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/composer/system.md) -gt 800 ]"
+        - name: "장-절-항"
+          command: "grep -q '장' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/composer/system.md && grep -q '절' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/composer/system.md && grep -q '항' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/composer/system.md"
+        - name: "12-13 제약"
+          command: "grep -qE '12.*13|13.*챕터' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/composer/system.md"
+        - name: "AGENT_DONE_SIGNAL"
+          command: "grep -q 'AGENT_DONE_SIGNAL' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/composer/system.md"
+
+    - name: prompt-designer-system
+      instruction: |
+        먼저 PRD/04_PROJECT_SPEC.md 와 .claude/agents/designer.md 를 읽어라.
+
+        prompts/designer/system.md 를 작성하라.
+
+        ## 목적
+        designer 에이전트의 system prompt. composed.md 를 입력으로 받아 DESIGN.md (슬라이드 구조 명세) 를 작성.
+
+        ## 작성 가이드
+        - 출력: DESIGN.md
+        - DESIGN.md 스키마 (YAML 또는 markdown table — 일관된 한 가지 선택):
+            ```
+            # DESIGN: <챕터 제목>
+
+            ## meta
+            - theme: black|white|league|... (Reveal.js theme)
+            - aspect_ratio: 16:9
+
+            ## slides
+            - type: title
+              content: ...
+            - type: learning_objectives
+              items: [...]
+            - type: section
+              section_num: 1
+              title: ...
+            - type: content
+              heading: ...
+              body_md: |
+                ...
+              image:
+                alt_text: ...
+                requirements: <자세한 요구사항>
+            - type: references
+              citations_ref: citations.json
+            ```
+        - **Richard Mayer 멀티미디어 설계 원리 엄격 적용**:
+            - 분할 원리: 한 슬라이드 50단어 상한 권장
+            - 모달리티 원리: 그림 적극 활용, 텍스트만 슬라이드 비율 ≤30%
+            - 공간 근접성, 일관성, 신호 원리
+        - 슬라이드 타입 enum: title | learning_objectives | section | content | references
+        - 이미지 요구사항 명세 (image-fetcher 가 사용): 한국어 라벨 명시, 라이선스 자동 확보 가능한 일반적 주제 선호
+        - Round 3 검수에서 이미지 license batch 점검 (designer 책임)
+
+        ## 출력 규약
+        ```
+        ---
+        # AGENT_DONE_SIGNAL: <task_id>
+        ```
+
+        ## 제약사항
+        - 직접 이미지 생성/검색 금지 (image-fetcher 트리거만)
+        - HTML 코드는 작성 금지 (developer 책임)
+        - Mayer 원리 위배 슬라이드는 자체 검열
+
+      gates:
+        - name: "파일 존재"
+          command: "[ -f /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/designer/system.md ]"
+        - name: "최소 길이"
+          command: "[ $(wc -c < /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/designer/system.md) -gt 800 ]"
+        - name: "Mayer 명시"
+          command: "grep -q 'Mayer' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/designer/system.md"
+        - name: "DESIGN.md 스키마 슬라이드 타입"
+          command: "grep -q 'title' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/designer/system.md && grep -q 'learning_objectives' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/designer/system.md"
+        - name: "AGENT_DONE_SIGNAL"
+          command: "grep -q 'AGENT_DONE_SIGNAL' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/designer/system.md"
+
+    - name: prompt-developer-system
+      instruction: |
+        먼저 PRD/04_PROJECT_SPEC.md, .claude/agents/developer.md, spike/RESULTS.md 를 읽어라.
+
+        prompts/developer/system.md 를 작성하라.
+
+        ## 목적
+        developer 에이전트의 system prompt. DESIGN.md + composed.md + images/ 를 받아 deck.md → deck.html (Reveal.js 5.x) 빌드.
+
+        ## 작성 가이드
+        - 출력: deck.md (Reveal.js Markdown), 이후 별도 빌드 단계 (혹은 직접 deck.html 작성)
+        - Reveal.js 5.x CDN 사용 (`https://unpkg.com/reveal.js@5/...`)
+        - 슬라이드 분리: Markdown 의 경우 `\n\n---\n\n` 또는 reveal.js `<section>` 직접
+        - 발표자 노트:
+            - composed.md 의 단락별 설명문 → reveal.js `<aside class="notes">` 자동 주입
+            - 또는 markdown 의 `Note:` 키워드
+        - 이미지: DESIGN.md 의 image 필드를 참조해 images/ 디렉토리에서 가져옴
+        - 키보드 네비, PDF 출력 (decktape), 화면 줌, 발표자 노트 가능
+        - `<!DOCTYPE html><html lang="ko">` 명시
+        - 메타 태그: title, author, viewport
+
+        ## 출력 규약
+        deck.md 또는 deck.html 본문 끝에:
+        ```
+        ---
+        # AGENT_DONE_SIGNAL: <task_id>
+        ```
+
+        ## 제약사항
+        - **pptx 변환 절대 금지**
+        - PDF 는 별도 step (scripts/export-pdf.sh 이 처리)
+        - 외부 빌드 도구 (webpack 등) 사용 금지 — 정적 HTML 만
+        - 한국어 폰트 안정성 (시스템 폰트 + Pretendard CDN 정도)
+
+      gates:
+        - name: "파일 존재"
+          command: "[ -f /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/developer/system.md ]"
+        - name: "최소 길이"
+          command: "[ $(wc -c < /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/developer/system.md) -gt 800 ]"
+        - name: "Reveal.js 5"
+          command: "grep -qE 'Reveal\\.js|reveal\\.js' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/developer/system.md && grep -q '5' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/developer/system.md"
+        - name: "pptx 금지"
+          command: "grep -qiE 'pptx.*금지|no pptx' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/developer/system.md"
+        - name: "AGENT_DONE_SIGNAL"
+          command: "grep -q 'AGENT_DONE_SIGNAL' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/developer/system.md"
+
+    # ───────────────────────────────────────────────────────────────────
+    # 그룹 C: 3 reviewer round prompts
+    # ───────────────────────────────────────────────────────────────────
+
+    - name: prompt-reviewer-round-1
+      instruction: |
+        먼저 PRD/04_PROJECT_SPEC.md (reviewer 섹션) 와 scripts/run-review.sh 를 읽어라 (run-review.sh 는 이 prompt 를 파일로 cat 해서 codex 에 전달함).
+
+        prompts/reviewer/round-1.md 를 작성하라.
+
+        ## 목적
+        Round 1 검수자(reviewer) 의 system prompt. **오탈자, 문법, 한국어 자연스러움** 만 점검.
+
+        ## 작성 가이드
+        - 명확한 명령형
+        - 입력: 대상 파일 내용 (composer/designer/developer 의 산출물 중 하나)
+        - 출력 (JSON 으로 강제, run-review.sh 가 파싱 — 단 codex 출력 마지막에 안전한 JSON 으로):
+            ```json
+            {
+              "round": 1,
+              "issues_count": <int>,
+              "issues": [
+                {"location": "line N or section X", "type": "오탈자|문법|어색한 표현", "before": "...", "after": "..."}
+              ],
+              "diff_summary": "...",
+              "passed": <true|false>
+            }
+            ```
+        - 검수 범위 명확화: 사실 관계는 round 2 에서, 일관성은 round 3 에서 점검. round 1 은 **언어 표면적 품질** 만.
+        - issues_count = 0 이면 passed=true
+        - 한국어 어색한 번역체 식별 (예: "~될 수 있다" 남발, 영어식 수동태)
+        - 학술 어조 유지 검사 (구어체/너무 캐주얼 X)
+
+        ## 출력 규약
+        JSON 출력 후 (별도 줄에):
+        ```
+        # AGENT_DONE_SIGNAL: <task_id>
+        ```
+
+        ## 제약사항
+        - 본문 1000-2000자
+        - 의미/사실 변경 금지 (이건 round 2 책임)
+
+      gates:
+        - name: "파일 존재"
+          command: "[ -f /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-1.md ]"
+        - name: "최소 길이"
+          command: "[ $(wc -c < /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-1.md) -gt 600 ]"
+        - name: "round 1 범위 명시 (오탈자/문법)"
+          command: "grep -qE '오탈자|문법' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-1.md"
+        - name: "JSON 출력 형식"
+          command: "grep -q 'issues_count' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-1.md"
+        - name: "AGENT_DONE_SIGNAL"
+          command: "grep -q 'AGENT_DONE_SIGNAL' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-1.md"
+
+    - name: prompt-reviewer-round-2
+      instruction: |
+        먼저 PRD/04_PROJECT_SPEC.md (reviewer 섹션) 를 읽어라.
+
+        prompts/reviewer/round-2.md 를 작성하라.
+
+        ## 목적
+        Round 2 검수자 prompt. **내용 정확성, 인용 출처, 사실 오류** 만 점검.
+
+        ## 작성 가이드
+        - 명령형 어조
+        - 출력 JSON (round-1 과 같은 구조):
+            ```json
+            {"round": 2, "issues_count": N, "issues": [...], "diff_summary": "...", "passed": bool}
+            ```
+        - 검수 범위:
+            - 인용된 사실 (예: "Mayer 2009") 의 정확성
+            - 출처 누락/잘못된 인용 식별
+            - 명백한 사실 오류 (예: "ADDIE 는 4단계다" — 실제 5단계)
+            - 한국 교육공학 학계의 통용 용어 vs 비통용 용어
+            - 오해 소지 있는 표현
+        - 사실 확인이 모호한 경우 issues 에 "verification_needed" 마커 + 출처 제안
+        - 본문에 명시되지 않은 사실은 추측 금지
+
+        ## 출력 규약
+        JSON 출력 후:
+        ```
+        # AGENT_DONE_SIGNAL: <task_id>
+        ```
+
+        ## 제약사항
+        - 오탈자는 round 1, 일관성/Mayer 는 round 3
+        - 본문 1000-2000자
+
+      gates:
+        - name: "파일 존재"
+          command: "[ -f /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-2.md ]"
+        - name: "최소 길이"
+          command: "[ $(wc -c < /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-2.md) -gt 600 ]"
+        - name: "사실 정확성"
+          command: "grep -qE '사실|정확성|인용' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-2.md"
+        - name: "JSON 출력 형식"
+          command: "grep -q 'issues_count' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-2.md"
+        - name: "AGENT_DONE_SIGNAL"
+          command: "grep -q 'AGENT_DONE_SIGNAL' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-2.md"
+
+    - name: prompt-reviewer-round-3
+      instruction: |
+        먼저 PRD/04_PROJECT_SPEC.md (reviewer 섹션의 designer round 3 license batch 점검 포함) 를 읽어라.
+
+        prompts/reviewer/round-3.md 를 작성하라.
+
+        ## 목적
+        Round 3 검수자 prompt. **일관성, 학습 흐름** + designer/developer 한정 **Mayer 원리** + designer 한정 **이미지 license batch 점검**.
+
+        ## 작성 가이드
+        - 명령형
+        - 출력 JSON (round-1, round-2 와 동일 구조):
+            ```json
+            {"round": 3, "issues_count": N, "issues": [...], "diff_summary": "...", "passed": bool, "license_check"?: {...}}
+            ```
+        - 검수 범위:
+            - 챕터 내 용어 일관성 (예: "교수 설계" vs "수업 설계" 통일)
+            - 학습 흐름의 자연스러움 (장-절-항 간 매끄러운 전개)
+            - 절-항 분량 균형
+            - **designer/developer 한정**: Mayer 원리 위배 슬라이드 식별 (분할/모달리티/근접성/일관성/신호)
+            - **designer 한정**: 이미지 license batch 점검 — 모든 Asset 의 license 필드 검증, 자동 신뢰가 기본이되 의심 사례는 PI 수동 승인 트리거 (`license_check.requires_pi_review: [...]`)
+        - 라이선스 의심 사유 예: "license 필드 누락", "license: 'Unknown'", "attribution 누락"
+
+        ## 출력 규약
+        JSON 출력 후:
+        ```
+        # AGENT_DONE_SIGNAL: <task_id>
+        ```
+
+        ## 제약사항
+        - 사실 변경/수정 제안은 round 2 책임
+        - Round 3 미수렴 시 강제 종료 + manual override 권고 메시지 명시
+        - 본문 1200-2500자
+
+      gates:
+        - name: "파일 존재"
+          command: "[ -f /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-3.md ]"
+        - name: "최소 길이"
+          command: "[ $(wc -c < /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-3.md) -gt 700 ]"
+        - name: "일관성/Mayer"
+          command: "grep -q '일관성' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-3.md && grep -q 'Mayer' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-3.md"
+        - name: "license batch 점검"
+          command: "grep -qE 'license.*batch|license.*점검|license_check' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-3.md"
+        - name: "manual override 명시"
+          command: "grep -q 'manual override' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-3.md"
+        - name: "JSON 출력 형식"
+          command: "grep -q 'issues_count' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-3.md"
+        - name: "AGENT_DONE_SIGNAL"
+          command: "grep -q 'AGENT_DONE_SIGNAL' /Users/taehyeong/Documents/GitHub/lecture-content-maker-agent-team/prompts/reviewer/round-3.md"
+
+  settings:
+    timeout: 3600

@@ -1,0 +1,148 @@
+:root {
+  color-scheme: light;
+  --dashboard-bg: #f8fafc;
+  --dashboard-surface: #ffffff;
+  --dashboard-surface-muted: #f1f5f9;
+  --dashboard-border: #dbe3ee;
+  --dashboard-text: #0f172a;
+  --dashboard-text-muted: #64748b;
+  --dashboard-ring: rgba(14, 165, 233, 0.34);
+  --dashboard-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --dashboard-shadow-hover: 0 12px 30px rgba(15, 23, 42, 0.12);
+  --status-queued: #64748b;
+  --status-running: #0284c7;
+  --status-review: #7c3aed;
+  --status-done: #059669;
+  --status-failed: #dc2626;
+}
+
+html.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --dashboard-bg: #0b1120;
+  --dashboard-surface: #111827;
+  --dashboard-surface-muted: #1f2937;
+  --dashboard-border: #334155;
+  --dashboard-text: #e5e7eb;
+  --dashboard-text-muted: #94a3b8;
+  --dashboard-ring: rgba(56, 189, 248, 0.36);
+  --dashboard-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --dashboard-shadow-hover: 0 14px 34px rgba(0, 0, 0, 0.38);
+  --status-queued: #94a3b8;
+  --status-running: #38bdf8;
+  --status-review: #a78bfa;
+  --status-done: #34d399;
+  --status-failed: #f87171;
+}
+
+html {
+  min-width: 1024px;
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  background: var(--dashboard-bg);
+  color: var(--dashboard-text);
+}
+
+body {
+  min-width: 1024px;
+  background:
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.08), transparent 28rem),
+    var(--dashboard-bg);
+  font-feature-settings: "kern";
+  text-rendering: optimizeLegibility;
+}
+
+.dashboard-card {
+  background: var(--dashboard-surface);
+  border: 1px solid var(--dashboard-border);
+  box-shadow: var(--dashboard-shadow);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.dashboard-card:hover {
+  border-color: color-mix(in srgb, var(--dashboard-border) 55%, var(--dashboard-text-muted));
+  box-shadow: var(--dashboard-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.dashboard-card:focus-within {
+  outline: 2px solid var(--dashboard-ring);
+  outline-offset: 2px;
+}
+
+.progress-track {
+  overflow: hidden;
+  background: var(--dashboard-surface-muted);
+  border: 1px solid var(--dashboard-border);
+}
+
+.progress-bar {
+  background: linear-gradient(90deg, #0ea5e9, #22c55e);
+  transform-origin: left center;
+  transition: width 420ms ease, transform 420ms ease, background-color 180ms ease;
+}
+
+.status-pill {
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.status-dot {
+  width: 0.625rem; height: 0.625rem;
+  border-radius: 9999px;
+  background: currentColor;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.status-queued { color: var(--status-queued); }
+.status-running { color: var(--status-running); }
+.status-review { color: var(--status-review); }
+.status-done { color: var(--status-done); }
+.status-failed { color: var(--status-failed); }
+
+.status-running .status-dot,
+.status-review .status-dot {
+  animation: status-pulse 1.5s ease-in-out infinite;
+}
+
+.event-row {
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.event-row:hover {
+  background: var(--dashboard-surface-muted);
+  transform: translateX(2px);
+}
+
+.mono-number {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes status-pulse {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-card,
+  .event-row,
+  .progress-bar {
+    transition: none;
+  }
+  .dashboard-card:hover,
+  .event-row:hover {
+    transform: none;
+  }
+  .status-running .status-dot,
+  .status-review .status-dot {
+    animation: none;
+  }
+}

@@ -1,0 +1,55 @@
+# lecture-content-maker-agent-team
+
+# ─── 비밀 ───
+.env
+.env.local
+.env.*.local
+*.secret
+**/credentials.json
+**/service-account*.json
+
+# ─── 런타임 상태 (생성됨, 커밋 X) ───
+STATE.json
+STATE.json.tmp
+STATE.json.bak
+
+# ─── 산출물 (Phase 1 PoC 결과는 별도 관리 정책) ───
+content/
+!content/.gitkeep
+
+# ─── 의존성 ───
+node_modules/
+package-lock.json
+package.json
+*.egg-info/
+__pycache__/
+.venv/
+venv/
+
+# ─── pumasi 작업 디렉토리 ───
+.pumasi/.jobs/
+.pumasi/output/
+
+# ─── 에디터/IDE ───
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── macOS ───
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ─── 로그/임시 ───
+*.log
+logs/
+tmp/
+*.tmp
+
+# ─── 빌드/생성 산출물 ───
+dist/
+build/
+.cache/
+*.pyc
