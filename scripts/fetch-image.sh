@@ -196,22 +196,11 @@ write_wiki_meta() {
     > "$meta_path"
 }
 
-generate_with_openai() {
-  # PI 정책 (2026-05-26): 이미지는 무조건 gpt-image-gen 구독제로 생성. codex fallback 폐기.
-  # OPENAI_API_KEY 또는 GPT_IMAGE_GEN_KEY 미설정 시 명시적 실패 — PI 가 .env 에 키를 넣도록 안내.
-  local filename output_path meta_path api_key response image_b64
-  api_key="${GPT_IMAGE_GEN_KEY:-${OPENAI_API_KEY:-}}"
-
-  if [[ -z "$api_key" ]]; then
-    cat >&2 <<MSG
-ERROR: OPENAI_API_KEY (또는 GPT_IMAGE_GEN_KEY) 가 .env / 환경에 설정되지 않았습니다.
-       이미지 생성을 위해 platform.openai.com/api-keys 에서 키 발급 후
-       프로젝트 루트의 .env 에 다음 라인을 추가하세요:
-         OPENAI_API_KEY=sk-...
-       (codex CLI OAuth 와 별개의 API key 입니다. 별도 결제 필요.)
-MSG
-    return 1
-  fi
+generate_with_codex() {
+  # PI 정책 (2026-05-26 갱신): codex CLI 의 내장 image_gen.imagegen tool 사용.
+  # OPENAI_API_KEY 별도 발급/결제 불필요 — ChatGPT subscription auth 로 호출됨.
+  # 비용은 PI 의 ChatGPT Pro/Plus plan 에 흡수.
+  local filename output_path meta_path abs_output codex_prompt
 
   filename="$REQUESTED_FILENAME"
   if [[ -z "$filename" ]]; then
@@ -221,25 +210,40 @@ MSG
   output_path="${OUT_DIR%/}/$filename"
   meta_path="${output_path}.meta.json"
 
-  response="$(retry_curl \
-    --request POST "https://api.openai.com/v1/images/generations" \
-    --header "Authorization: Bearer ${api_key}" \
-    --header "Content-Type: application/json" \
-    --data "$(jq -n --arg prompt "$QUERY" '{model: "gpt-image-1", prompt: $prompt, size: "1024x1024"}')")"
+  # codex sandbox 에서 작성 가능한 절대 경로로 변환
+  mkdir -p "$OUT_DIR"
+  abs_output="$(cd "$(dirname "$output_path")" && pwd)/$(basename "$output_path")"
 
-  image_b64="$(jq -r '.data[0].b64_json // empty' <<<"$response")"
-  if [[ -z "$image_b64" ]]; then
-    echo "OpenAI Images API response did not include image data." >&2
+  codex_prompt="Use the image_gen.imagegen tool (not Python/PIL/matplotlib — only the actual image generation tool) to create the following image, then save the generated PNG to the exact path ${abs_output} (overwrite if exists).
+
+Image prompt:
+${QUERY}
+
+Output requirements:
+- Single PNG file at ${abs_output}
+- After saving, output the file path on a single line and exit. No other commentary."
+
+  if codex exec --model gpt-5.5 \
+        -c model_reasoning_effort=low \
+        -c sandbox_mode=workspace-write \
+        --skip-git-repo-check \
+        "$codex_prompt" >/dev/null 2>&1; then
+    if [[ -f "$output_path" ]] && [[ "$(stat -f%z "$output_path" 2>/dev/null || echo 0)" -gt 5000 ]]; then
+      jq -n \
+        --arg source "gpt-image-gen (codex image_gen.imagegen)" \
+        --arg license "AI-generated" \
+        --arg model "gpt-5.5 + image_gen.imagegen" \
+        --arg prompt "$QUERY" \
+        '{source: $source, license: $license, model: $model, prompt: $prompt}' \
+        > "$meta_path"
+      return 0
+    fi
+    echo "codex 호출은 성공했으나 출력 파일(${abs_output})이 비어있음/없음." >&2
+    return 1
+  else
+    echo "codex exec image_gen 호출 실패 (codex auth 또는 quota 확인 필요)." >&2
     return 1
   fi
-
-  printf '%s' "$image_b64" | base64 --decode > "$output_path"
-  jq -n \
-    --arg source "gpt-image-gen" \
-    --arg license "AI-generated" \
-    --arg prompt "$QUERY" \
-    '{source: $source, license: $license, prompt: $prompt}' \
-    > "$meta_path"
 }
 
 require_command curl
@@ -267,7 +271,7 @@ if [[ "$PREFERRED_SOURCE" == "wiki" ]]; then
       fi
     done < <(extract_candidates <<<"$wiki_response")
   fi
-  echo "Wikimedia 검색·다운로드 실패 — gpt-image-gen 폴백 시도." >&2
+  echo "Wikimedia 검색·다운로드 실패 — codex image_gen 폴백 시도." >&2
 fi
 
-generate_with_openai
+generate_with_codex
