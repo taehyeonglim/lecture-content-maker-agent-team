@@ -5,13 +5,16 @@ const TASK_ROLES = ["decomposer", "composer", "designer", "developer"];
 const usageHistory = [];  // {ts: Date, tokens, cost, calls} 시계열
 let usageChart = null;
 
-const STATUS_STYLES = {
-  queued: { label: "대기", color: "#6b7280", background: "#f3f4f6", border: "#d1d5db" },
-  running: { label: "진행 중", color: "#1d4ed8", background: "#dbeafe", border: "#93c5fd" },
-  review: { label: "검수", color: "#a16207", background: "#fef3c7", border: "#facc15" },
-  done: { label: "완료", color: "#15803d", background: "#dcfce7", border: "#86efac" },
-  failed: { label: "실패", color: "#b91c1c", background: "#fee2e2", border: "#fca5a5" },
+// status → 한글 라벨 (시각은 CSS .status-pill .status-<key> 에서 처리)
+const STATUS_LABELS = {
+  queued: "대기",
+  running: "진행 중",
+  review: "검수",
+  done: "완료",
+  failed: "실패",
+  unknown: "—",
 };
+const KNOWN_STATUSES = ["queued", "running", "review", "done", "failed"];
 
 let pollTimer = null;
 
@@ -118,6 +121,16 @@ function initUsageChart() {
   const canvas = document.getElementById("usage-chart");
   if (!canvas || typeof Chart === "undefined") return;
   const ctx = canvas.getContext("2d");
+  const root = getComputedStyle(document.documentElement);
+  const textColor = root.getPropertyValue("--text-muted").trim() || "#94a3b8";
+  const gridColor = root.getPropertyValue("--border").trim() || "rgba(148,163,184,0.15)";
+  const surface = root.getPropertyValue("--surface-elev").trim() || "rgba(31,41,55,0.9)";
+  const textStrong = root.getPropertyValue("--text-strong").trim() || "#f8fafc";
+
+  // Chart.js 글로벌 폰트
+  Chart.defaults.font.family = "'Pretendard', 'Apple SD Gothic Neo', sans-serif";
+  Chart.defaults.color = textColor;
+
   usageChart = new Chart(ctx, {
     type: "line",
     data: {
@@ -129,27 +142,55 @@ function initUsageChart() {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
+      layout: { padding: { top: 8, right: 8 } },
       scales: {
         x: {
-          ticks: { autoSkip: true, maxTicksLimit: 8, font: { size: 10 } },
+          ticks: {
+            autoSkip: true,
+            maxTicksLimit: 8,
+            font: { size: 10, weight: "500" },
+            color: textColor,
+          },
           grid: { display: false },
+          border: { color: gridColor },
         },
         y: {
           type: "linear",
           beginAtZero: true,
           ticks: {
             callback: function (v) { return formatTokens(v); },
-            font: { size: 10 },
+            font: { size: 10, weight: "500" },
+            color: textColor,
           },
-          title: { display: true, text: "누적 토큰", font: { size: 11 } },
+          grid: { color: gridColor, lineWidth: 1 },
+          border: { display: false },
+          title: { display: false },
         },
       },
       plugins: {
-        legend: { position: "bottom", labels: { font: { size: 11 } } },
+        legend: {
+          position: "bottom",
+          labels: {
+            font: { size: 12, weight: "600" },
+            color: textStrong,
+            usePointStyle: true,
+            pointStyle: "circle",
+            padding: 14,
+          },
+        },
         tooltip: {
+          backgroundColor: surface,
+          titleColor: textStrong,
+          bodyColor: textStrong,
+          borderColor: gridColor,
+          borderWidth: 1,
+          padding: 10,
+          cornerRadius: 8,
+          displayColors: true,
+          boxPadding: 4,
           callbacks: {
             label: function (item) {
-              return `${item.dataset.label}: ${formatTokens(item.parsed.y)}`;
+              return ` ${item.dataset.label}: ${formatTokens(item.parsed.y)}`;
             },
           },
         },
@@ -217,12 +258,20 @@ function formatDateTime(value) {
   }).format(date);
 }
 
-function getStatusStyle(status) {
-  return STATUS_STYLES[status] || STATUS_STYLES.queued;
+function normalizeStatus(status) {
+  const s = String(status || "queued");
+  return KNOWN_STATUSES.includes(s) ? s : "queued";
 }
 
 function getStatusLabel(status) {
-  return STATUS_STYLES[status] ? STATUS_STYLES[status].label : String(status || "queued");
+  return STATUS_LABELS[normalizeStatus(status)] || String(status || "queued");
+}
+
+// status → CSS 색상 변수 (chart bar 등 inline 색이 필요한 곳에서 사용)
+function getStatusColor(status) {
+  const s = normalizeStatus(status);
+  const root = getComputedStyle(document.documentElement);
+  return root.getPropertyValue(`--status-${s}`).trim() || "#94a3b8";
 }
 
 function getTaskProgress(task) {
@@ -243,10 +292,8 @@ function createElement(tagName, className, text) {
 }
 
 function applyStatusStyle(element, status) {
-  const style = getStatusStyle(status);
-  element.style.color = style.color;
-  element.style.backgroundColor = style.background;
-  element.style.borderColor = style.border;
+  // CSS 클래스 적용 (.status-pill .status-<key>) — color는 CSS variable로 처리됨
+  element.classList.add("status-pill", `status-${normalizeStatus(status)}`);
 }
 
 function hideMessage() {
@@ -287,43 +334,44 @@ function updateOverallProgress(value) {
 }
 
 function renderStatusBadge(status) {
-  const badge = createElement(
-    "span",
-    "inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium",
-    getStatusLabel(status),
-  );
-  applyStatusStyle(badge, status);
+  const s = normalizeStatus(status);
+  const badge = createElement("span", "");
+  const dot = createElement("span", "status-dot");
+  const labelSpan = createElement("span", "", getStatusLabel(s));
+  badge.append(dot, labelSpan);
+  applyStatusStyle(badge, s);
   return badge;
 }
 
 function renderTask(role, task) {
   const status = task && task.status ? task.status : "queued";
   const progress = getTaskProgress(task);
-  const item = createElement("div", "rounded border border-gray-200 p-3");
+  const item = createElement("div", "task-tile");
 
-  const header = createElement("div", "mb-2 flex items-center justify-between gap-2");
+  const header = createElement("div", "flex items-center justify-between gap-2");
   header.append(
-    createElement("span", "text-sm font-semibold text-gray-900", role),
+    createElement("span", "text-sm font-semibold tracking-tight", role),
     renderStatusBadge(status),
   );
 
-  const bar = createElement("div", "h-2 overflow-hidden rounded bg-gray-100");
-  const fill = createElement("div", "h-full rounded");
+  const bar = createElement("div", "task-tile-progress");
+  const fill = createElement("div", "task-tile-progress-fill");
   fill.style.width = `${progress}%`;
-  fill.style.backgroundColor = getStatusStyle(status).color;
+  fill.style.background = getStatusColor(status);
   bar.append(fill);
 
-  const meta = createElement("div", "mt-2 text-xs text-gray-600");
+  const meta = createElement("div", "mt-2 text-[11px] leading-snug",
+    "");
+  meta.style.color = "var(--text-muted)";
   const reviewsPassed = task && task.reviews_passed !== undefined ? toNumber(task.reviews_passed) : 0;
   const model = task && task.model ? ` · ${task.model}` : "";
-  // task.usage 가 있으면 토큰·호출수 표시. 없거나 0 이면 — 표시
   const usagePart = (task && task.usage && (task.usage.tokens || task.usage.calls))
     ? ` · ${formatTokens(task.usage.tokens)} 토큰 (${toNumber(task.usage.calls)}회)`
     : "";
   const costPart = (task && task.cost_usd && toNumber(task.cost_usd) > 0)
     ? ` · ${formatCurrency(task.cost_usd)}`
     : "";
-  meta.textContent = `검수 통과 ${reviewsPassed}/3${model}${usagePart}${costPart}`;
+  meta.textContent = `검수 ${reviewsPassed}/3${model}${usagePart}${costPart}`;
 
   item.append(header, bar, meta);
   return item;
@@ -331,13 +379,17 @@ function renderTask(role, task) {
 
 function renderChapterCard(chapter) {
   const chapterData = chapter || {};
-  const card = createElement("article", "rounded border border-gray-200 bg-white p-4 shadow-sm");
+  const card = createElement("article", "chapter-card");
   const header = createElement("div", "mb-4 flex items-start justify-between gap-3");
-  const titleGroup = createElement("div");
-  titleGroup.append(
-    createElement("p", "text-xs font-medium text-gray-500", chapterData.id || `chapter-${chapterData.num || "?"}`),
-    createElement("h2", "mt-1 text-base font-semibold text-gray-950", chapterData.title || "제목 없음"),
-  );
+  const titleGroup = createElement("div", "min-w-0");
+  const num = chapterData.num != null ? `Chapter ${String(chapterData.num).padStart(2, "0")}` : (chapterData.id || "Chapter");
+  const numEl = createElement("p", "text-[10px] font-bold tracking-[0.18em] uppercase");
+  numEl.style.color = "var(--accent)";
+  numEl.textContent = num;
+  const titleEl = createElement("h3", "mt-1 truncate text-lg font-bold tracking-tight");
+  titleEl.style.color = "var(--text-strong)";
+  titleEl.textContent = chapterData.title || "제목 없음";
+  titleGroup.append(numEl, titleEl);
   header.append(titleGroup, renderStatusBadge(chapterData.status || "queued"));
 
   const taskMap = new Map(
@@ -345,7 +397,7 @@ function renderChapterCard(chapter) {
       .filter((task) => task && task.role)
       .map((task) => [task.role, task]),
   );
-  const taskGrid = createElement("div", "grid gap-3 md:grid-cols-2");
+  const taskGrid = createElement("div", "grid gap-2.5 md:grid-cols-2");
   TASK_ROLES.forEach((role) => taskGrid.append(renderTask(role, taskMap.get(role))));
 
   card.append(header, taskGrid);
@@ -357,7 +409,11 @@ function renderChapters(chapters) {
   if (!grid) return;
   clearElement(grid);
   if (!Array.isArray(chapters) || chapters.length === 0) {
-    grid.append(createElement("p", "text-sm text-gray-500", "표시할 챕터가 아직 없습니다."));
+    const placeholder = createElement("p", "rounded-md border border-dashed px-4 py-3 text-sm");
+    placeholder.style.borderColor = "var(--border-strong)";
+    placeholder.style.color = "var(--text-muted)";
+    placeholder.textContent = "표시할 챕터가 아직 없습니다.";
+    grid.append(placeholder);
     return;
   }
   chapters.forEach((chapter) => grid.append(renderChapterCard(chapter)));
@@ -370,14 +426,15 @@ function renderActiveAgents(activeAgents) {
   setText("active-agents-count", String(Array.isArray(activeAgents) ? activeAgents.length : 0));
   const itemTag = container.tagName === "UL" || container.tagName === "OL" ? "li" : "span";
   if (!Array.isArray(activeAgents) || activeAgents.length === 0) {
-    container.append(createElement(itemTag, "text-sm text-gray-500", "현재 실행 중인 에이전트가 없습니다."));
+    const empty = createElement(itemTag, "rounded-md border border-dashed px-3 py-2 text-xs");
+    empty.style.borderColor = "var(--border-strong)";
+    empty.style.color = "var(--text-muted)";
+    empty.textContent = "현재 실행 중인 에이전트가 없습니다";
+    container.append(empty);
     return;
   }
   activeAgents.forEach((agent) => {
-    const chip = createElement(itemTag, "inline-flex rounded-full border px-3 py-1 text-sm font-medium", String(agent));
-    chip.style.color = "#1d4ed8";
-    chip.style.backgroundColor = "#dbeafe";
-    chip.style.borderColor = "#93c5fd";
+    const chip = createElement(itemTag, "agent-chip", String(agent));
     container.append(chip);
   });
 }
@@ -396,7 +453,11 @@ function renderRecentEvents(events) {
   if (!container) return;
   clearElement(container);
   if (!Array.isArray(events) || events.length === 0) {
-    container.append(createElement("li", "text-sm text-gray-500", "최근 이벤트가 없습니다."));
+    const empty = createElement("li", "rounded-md border border-dashed px-3 py-2 text-xs");
+    empty.style.borderColor = "var(--border-strong)";
+    empty.style.color = "var(--text-muted)";
+    empty.textContent = "이벤트 없음";
+    container.append(empty);
     return;
   }
   events
@@ -405,11 +466,14 @@ function renderRecentEvents(events) {
     .slice(0, 10)
     .forEach((event) => {
       const eventData = event || {};
-      const item = createElement("li", "rounded border border-gray-200 p-3");
-      item.append(
-        createElement("time", "block text-xs text-gray-500", formatDateTime(eventData.ts)),
-        createElement("p", "mt-1 text-sm text-gray-900", eventSummary(eventData)),
-      );
+      const item = createElement("li", "event-row");
+      const time = createElement("time", "block text-[10px] font-medium uppercase tracking-wider");
+      time.style.color = "var(--text-muted)";
+      time.textContent = formatDateTime(eventData.ts);
+      const summary = createElement("p", "mt-0.5 text-sm font-medium leading-snug");
+      summary.style.color = "var(--text-strong)";
+      summary.textContent = eventSummary(eventData);
+      item.append(time, summary);
       container.append(item);
     });
 }

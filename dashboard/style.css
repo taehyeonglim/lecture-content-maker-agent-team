@@ -1,148 +1,420 @@
 :root {
-  color-scheme: light;
-  --dashboard-bg: #f8fafc;
-  --dashboard-surface: #ffffff;
-  --dashboard-surface-muted: #f1f5f9;
-  --dashboard-border: #dbe3ee;
-  --dashboard-text: #0f172a;
-  --dashboard-text-muted: #64748b;
-  --dashboard-ring: rgba(14, 165, 233, 0.34);
-  --dashboard-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --dashboard-shadow-hover: 0 12px 30px rgba(15, 23, 42, 0.12);
-  --status-queued: #64748b;
-  --status-running: #0284c7;
-  --status-review: #7c3aed;
-  --status-done: #059669;
-  --status-failed: #dc2626;
+  color-scheme: dark;
+  --bg: #07090f;
+  --bg-aurora-1: #1e1b4b;  /* indigo-950 */
+  --bg-aurora-2: #042f2e;  /* teal-950 */
+  --surface: rgba(17, 24, 39, 0.78);
+  --surface-elev: rgba(31, 41, 55, 0.72);
+  --surface-muted: rgba(15, 23, 42, 0.5);
+  --border: rgba(148, 163, 184, 0.14);
+  --border-strong: rgba(148, 163, 184, 0.28);
+  --text: #e5e7eb;
+  --text-strong: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --accent: #818cf8;        /* indigo-400 */
+  --accent-strong: #6366f1; /* indigo-500 */
+  --accent-glow: rgba(129, 140, 248, 0.35);
+  --ring: rgba(129, 140, 248, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 18px -6px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 18px 40px -12px rgba(0, 0, 0, 0.65);
+
+  --status-queued: #94a3b8;   /* slate-400 */
+  --status-running: #60a5fa;  /* blue-400 */
+  --status-review: #fbbf24;   /* amber-400 */
+  --status-done: #34d399;     /* emerald-400 */
+  --status-failed: #f87171;   /* rose-400 */
 }
 
-html.dark,
-[data-theme="dark"] {
-  color-scheme: dark;
-  --dashboard-bg: #0b1120;
-  --dashboard-surface: #111827;
-  --dashboard-surface-muted: #1f2937;
-  --dashboard-border: #334155;
-  --dashboard-text: #e5e7eb;
-  --dashboard-text-muted: #94a3b8;
-  --dashboard-ring: rgba(56, 189, 248, 0.36);
-  --dashboard-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
-  --dashboard-shadow-hover: 0 14px 34px rgba(0, 0, 0, 0.38);
-  --status-queued: #94a3b8;
-  --status-running: #38bdf8;
-  --status-review: #a78bfa;
-  --status-done: #34d399;
-  --status-failed: #f87171;
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) {
+    color-scheme: light;
+    --bg: #f4f6fb;
+    --bg-aurora-1: #e0e7ff;
+    --bg-aurora-2: #ccfbf1;
+    --surface: rgba(255, 255, 255, 0.92);
+    --surface-elev: rgba(248, 250, 252, 0.92);
+    --surface-muted: rgba(241, 245, 249, 0.7);
+    --border: rgba(15, 23, 42, 0.1);
+    --border-strong: rgba(15, 23, 42, 0.2);
+    --text: #0f172a;
+    --text-strong: #020617;
+    --text-muted: #475569;
+    --text-dim: #64748b;
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-md: 0 6px 16px -4px rgba(15, 23, 42, 0.08);
+    --shadow-lg: 0 18px 40px -10px rgba(15, 23, 42, 0.14);
+    --status-running: #2563eb;
+    --status-review: #b45309;
+    --status-done: #047857;
+    --status-failed: #be123c;
+  }
 }
 
 html {
   min-width: 1024px;
-  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  background: var(--dashboard-bg);
-  color: var(--dashboard-text);
+  font-family:
+    'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR',
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-feature-settings: "kern", "ss01";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
   min-width: 1024px;
+  position: relative;
   background:
-    radial-gradient(circle at top left, rgba(14, 165, 233, 0.08), transparent 28rem),
-    var(--dashboard-bg);
-  font-feature-settings: "kern";
-  text-rendering: optimizeLegibility;
+    radial-gradient(900px circle at 15% -10%, color-mix(in srgb, var(--bg-aurora-1) 60%, transparent), transparent 60%),
+    radial-gradient(700px circle at 85% 0%, color-mix(in srgb, var(--bg-aurora-2) 50%, transparent), transparent 55%),
+    var(--bg);
 }
 
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.06) 1px, transparent 0);
+  background-size: 24px 24px;
+  z-index: 0;
+}
+
+/* ───────────────────────────── 카드 ───────────────────────────── */
 .dashboard-card {
-  background: var(--dashboard-surface);
-  border: 1px solid var(--dashboard-border);
-  box-shadow: var(--dashboard-shadow);
-  transition:
-    border-color 180ms ease,
-    box-shadow 180ms ease,
-    transform 180ms ease;
+  background: var(--surface);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  position: relative;
 }
 
 .dashboard-card:hover {
-  border-color: color-mix(in srgb, var(--dashboard-border) 55%, var(--dashboard-text-muted));
-  box-shadow: var(--dashboard-shadow-hover);
-  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-lg);
 }
 
-.dashboard-card:focus-within {
-  outline: 2px solid var(--dashboard-ring);
-  outline-offset: 2px;
+.dashboard-subcard {
+  background: var(--surface-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  transition: border-color 180ms ease, transform 200ms ease;
 }
 
-.progress-track {
+.dashboard-subcard:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+/* 헤더 강조 카드 */
+.hero-card {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-strong) 14%, transparent), transparent 70%),
+    var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
   overflow: hidden;
-  background: var(--dashboard-surface-muted);
-  border: 1px solid var(--dashboard-border);
 }
 
-.progress-bar {
-  background: linear-gradient(90deg, #0ea5e9, #22c55e);
-  transform-origin: left center;
-  transition: width 420ms ease, transform 420ms ease, background-color 180ms ease;
+.hero-card::after {
+  content: "";
+  position: absolute;
+  top: -50%; right: -20%;
+  width: 60%; height: 200%;
+  background: radial-gradient(circle, var(--accent-glow), transparent 60%);
+  pointer-events: none;
+  filter: blur(40px);
+  opacity: 0.45;
 }
 
-.status-pill {
-  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
-  background: color-mix(in srgb, currentColor 10%, transparent);
+.hero-card > * { position: relative; z-index: 1; }
+
+/* ─────────────────────── 라벨/숫자 ─────────────────────── */
+.metric-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
-.status-dot {
-  width: 0.625rem; height: 0.625rem;
-  border-radius: 9999px;
-  background: currentColor;
-  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 16%, transparent);
+.metric-value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 
-.status-queued { color: var(--status-queued); }
-.status-running { color: var(--status-running); }
-.status-review { color: var(--status-review); }
-.status-done { color: var(--status-done); }
-.status-failed { color: var(--status-failed); }
-
-.status-running .status-dot,
-.status-review .status-dot {
-  animation: status-pulse 1.5s ease-in-out infinite;
-}
-
-.event-row {
-  transition: background-color 160ms ease, transform 160ms ease;
-}
-
-.event-row:hover {
-  background: var(--dashboard-surface-muted);
-  transform: translateX(2px);
+.metric-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .mono-number {
   font-variant-numeric: tabular-nums;
 }
 
-@keyframes status-pulse {
-  0%, 100% {
-    opacity: 0.7;
-    transform: scale(0.92);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
+/* ──────────────────────── 진행률 바 ──────────────────────── */
+.progress-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  position: relative;
 }
 
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--accent-strong) 0%,
+    #60a5fa 40%,
+    #22d3ee 80%,
+    #34d399 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 9999px;
+  transition: width 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 0 12px var(--accent-glow);
+  animation: progress-shimmer 3.5s linear infinite;
+}
+
+@keyframes progress-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: 0 0; }
+}
+
+/* ──────────────────── 상태 pill + dot ──────────────────── */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  color: currentColor;
+}
+
+.status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+}
+
+.status-queued  { color: var(--status-queued); }
+.status-running { color: var(--status-running); }
+.status-review  { color: var(--status-review); }
+.status-done    { color: var(--status-done); }
+.status-failed  { color: var(--status-failed); }
+
+.status-running .status-dot,
+.status-review  .status-dot {
+  animation: status-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1.05); }
+}
+
+/* ─────────────── 활성 에이전트 칩 (펄스 ring) ─────────────── */
+.agent-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--accent-strong) 22%, transparent),
+      color-mix(in srgb, #22d3ee 16%, transparent)
+    );
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent-glow) 60%, transparent);
+}
+
+.agent-chip::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+  animation: status-pulse 1.5s ease-in-out infinite;
+}
+
+/* ──────────────────── 이벤트 타임라인 ──────────────────── */
+.event-row {
+  position: relative;
+  padding: 0.625rem 0.75rem 0.625rem 1.5rem;
+  border-radius: 10px;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.event-row::before {
+  content: "";
+  position: absolute;
+  left: 0.625rem;
+  top: 0.95rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.event-row + .event-row::after {
+  content: "";
+  position: absolute;
+  left: calc(0.625rem + 3.5px);
+  top: -0.625rem;
+  bottom: 100%;
+  width: 1px;
+  height: 0.625rem;
+  background: var(--border-strong);
+}
+
+.event-row:hover {
+  background: var(--surface-muted);
+  transform: translateX(2px);
+}
+
+/* ──────────────────── 챕터/태스크 ──────────────────── */
+.task-tile {
+  border: 1px solid var(--border);
+  background: var(--surface-elev);
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
+  transition: border-color 180ms ease, transform 200ms ease, box-shadow 180ms ease;
+}
+
+.task-tile:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.task-tile-progress {
+  height: 4px;
+  background: var(--surface-muted);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.task-tile-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ──────────────────── 헤더 강조 ──────────────────── */
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.brand-mark::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.section-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-strong);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* ──────────────────── 챕터 카드 ──────────────────── */
+.chapter-card {
+  background: var(--surface);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.chapter-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ──────────────────── 접근성/모션 감소 ──────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .dashboard-card,
+  .dashboard-subcard,
+  .task-tile,
   .event-row,
-  .progress-bar {
+  .progress-bar,
+  .agent-chip {
     transition: none;
+    animation: none !important;
   }
   .dashboard-card:hover,
+  .task-tile:hover,
   .event-row:hover {
     transform: none;
   }
-  .status-running .status-dot,
-  .status-review .status-dot {
-    animation: none;
-  }
 }
+
+/* ──────────────────── 스크롤바 ──────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border-strong) 80%, transparent);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+</content>

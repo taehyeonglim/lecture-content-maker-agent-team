@@ -8,156 +8,124 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
   </head>
-  <body class="min-h-screen bg-slate-100 text-slate-950 antialiased dark:bg-slate-950 dark:text-slate-100">
-    <div class="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
-      <header class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div class="min-w-0">
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">lecture-content-maker-agent-team</p>
-            <h1 id="course-name" class="mt-1 truncate text-2xl font-semibold tracking-normal text-slate-950 dark:text-white">
+  <body class="min-h-screen antialiased">
+    <div class="relative z-10 mx-auto flex min-h-screen w-full max-w-[1440px] flex-col gap-6 px-5 py-6 sm:px-7 lg:px-10">
+
+      <!-- ─────────────── HERO HEADER ─────────────── -->
+      <header class="hero-card p-7 lg:p-9">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div class="min-w-0 flex-1">
+            <span class="brand-mark">lecture-content-maker · multi-agent</span>
+            <h1 id="course-name" class="mt-3 truncate text-3xl font-bold tracking-tight text-[color:var(--text-strong)] sm:text-4xl">
               코스 정보를 불러오는 중
             </h1>
+            <p class="mt-1.5 text-sm text-[color:var(--text-muted)]">PI 임태형 · Phase 1 · 1챕터 PoC</p>
           </div>
-          <div class="grid gap-3 sm:grid-cols-3 lg:w-[48rem]">
-            <section aria-labelledby="usage-label" class="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-              <p id="usage-label" class="text-sm font-medium text-slate-500 dark:text-slate-400">누적 사용량</p>
-              <p id="cumulative-usage" class="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">0 토큰 · 0 호출</p>
-              <p id="session-duration" class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">세션 시간: -</p>
+
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:w-[40rem]">
+            <section aria-labelledby="usage-label" class="dashboard-subcard">
+              <p id="usage-label" class="metric-label">누적 사용량</p>
+              <p id="cumulative-usage" class="metric-value mt-1.5">0 토큰</p>
+              <p id="session-duration" class="metric-sub">0 호출 · 세션 -</p>
             </section>
-            <section aria-labelledby="cost-label" class="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-              <p id="cost-label" class="text-sm font-medium text-slate-500 dark:text-slate-400">누적 환산 비용 <span class="text-xs text-slate-400">(API 단가 기준)</span></p>
-              <p id="cumulative-cost" class="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">$0.00</p>
-              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">config/pricing.json 기준 환산</p>
+            <section aria-labelledby="cost-label" class="dashboard-subcard">
+              <p id="cost-label" class="metric-label">환산 비용 (USD)</p>
+              <p id="cumulative-cost" class="metric-value mt-1.5">$0.00</p>
+              <p class="metric-sub">config/pricing.json 기준</p>
             </section>
-            <section aria-labelledby="updated-label" class="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-              <p id="updated-label" class="text-sm font-medium text-slate-500 dark:text-slate-400">마지막 갱신</p>
-              <time id="updated-at" datetime="" class="mt-1 block text-base font-semibold text-slate-950 dark:text-white">-</time>
+            <section aria-labelledby="updated-label" class="dashboard-subcard">
+              <p id="updated-label" class="metric-label">마지막 갱신</p>
+              <time id="updated-at" datetime="" class="metric-value mt-1.5 text-xl">-</time>
+              <p class="metric-sub">2초마다 폴링</p>
             </section>
           </div>
         </div>
 
-        <section aria-labelledby="overall-progress-label" class="mt-5">
+        <section aria-labelledby="overall-progress-label" class="mt-7">
           <div class="mb-2 flex items-center justify-between gap-3">
-            <p id="overall-progress-label" class="text-sm font-medium text-slate-700 dark:text-slate-300">전체 진행률</p>
-            <output id="overall-progress-value" class="text-sm font-semibold text-slate-900 dark:text-slate-100">0%</output>
+            <p id="overall-progress-label" class="text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">전체 진행률</p>
+            <output id="overall-progress-value" class="mono-number text-sm font-bold text-[color:var(--text-strong)]">0%</output>
           </div>
           <div
             id="overall-progress"
-            class="h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800"
+            class="progress-track"
             role="progressbar"
             aria-valuemin="0"
             aria-valuemax="100"
             aria-valuenow="0"
           >
-            <div data-progress-fill class="h-full w-0 rounded-full bg-blue-600 transition-all duration-300 dark:bg-blue-400"></div>
+            <div data-progress-fill class="progress-bar" style="width: 0"></div>
           </div>
         </section>
       </header>
 
-      <section aria-labelledby="usage-chart-title" class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div class="mb-3 flex items-center justify-between gap-3">
-          <h2 id="usage-chart-title" class="text-base font-semibold text-slate-950 dark:text-white">사용량 추이 (모델별)</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400">2초마다 갱신 · 최근 6분 · 모델별 누적 토큰</p>
+      <!-- ─────────────── USAGE CHART ─────────────── -->
+      <section aria-labelledby="usage-chart-title" class="dashboard-card p-6">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <h2 id="usage-chart-title" class="section-title">사용량 추이 (모델별)</h2>
+          <p class="text-xs text-[color:var(--text-muted)]">2초마다 갱신 · 6분 · 모델별 누적 토큰</p>
         </div>
-        <div class="relative h-56 sm:h-64">
+        <div class="relative h-60 sm:h-72">
           <canvas id="usage-chart"></canvas>
         </div>
       </section>
 
-      <main class="grid flex-1 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <!-- ─────────────── MAIN GRID ─────────────── -->
+      <main class="grid flex-1 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <!-- 챕터 진행상황 -->
         <section aria-labelledby="chapters-title" class="min-w-0">
-          <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 id="chapters-title" class="text-lg font-semibold text-slate-950 dark:text-white">챕터 진행상황</h2>
-              <p class="text-sm text-slate-500 dark:text-slate-400">Phase 1은 1챕터, 이후 12-13챕터까지 확장 가능</p>
+              <h2 id="chapters-title" class="section-title text-base">챕터 진행상황</h2>
+              <p class="ml-4 mt-1 text-xs text-[color:var(--text-muted)]">Phase 1은 1챕터 · 이후 12-13챕터까지 확장</p>
             </div>
-            <div class="flex flex-wrap gap-2 text-xs font-medium">
-              <span class="rounded-full bg-gray-100 px-2.5 py-1 text-gray-700 ring-1 ring-gray-300 dark:bg-gray-900/60 dark:text-gray-300 dark:ring-gray-700">queued</span>
-              <span class="rounded-full bg-blue-100 px-2.5 py-1 text-blue-700 ring-1 ring-blue-300 dark:bg-blue-950/70 dark:text-blue-300 dark:ring-blue-700">running</span>
-              <span class="rounded-full bg-yellow-100 px-2.5 py-1 text-yellow-800 ring-1 ring-yellow-300 dark:bg-yellow-950/70 dark:text-yellow-200 dark:ring-yellow-700">review</span>
-              <span class="rounded-full bg-green-100 px-2.5 py-1 text-green-700 ring-1 ring-green-300 dark:bg-green-950/70 dark:text-green-300 dark:ring-green-700">done</span>
-              <span class="rounded-full bg-red-100 px-2.5 py-1 text-red-700 ring-1 ring-red-300 dark:bg-red-950/70 dark:text-red-300 dark:ring-red-700">failed</span>
+            <div class="flex flex-wrap gap-2">
+              <span class="status-pill status-queued"><span class="status-dot"></span>queued</span>
+              <span class="status-pill status-running"><span class="status-dot"></span>running</span>
+              <span class="status-pill status-review"><span class="status-dot"></span>review</span>
+              <span class="status-pill status-done"><span class="status-dot"></span>done</span>
+              <span class="status-pill status-failed"><span class="status-dot"></span>failed</span>
             </div>
           </div>
 
           <div id="chapter-grid" class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3" aria-live="polite">
-            <article class="rounded-lg border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+            <article class="dashboard-card p-6 text-sm text-[color:var(--text-muted)]">
               STATE.json 데이터를 기다리는 중입니다.
             </article>
           </div>
         </section>
 
-        <aside class="grid content-start gap-6">
-          <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900" aria-labelledby="agents-title">
+        <!-- 사이드바: 활성 에이전트 + 이벤트 -->
+        <aside class="grid content-start gap-5">
+          <section class="dashboard-card p-6" aria-labelledby="agents-title">
             <div class="mb-4 flex items-center justify-between gap-3">
-              <h2 id="agents-title" class="text-lg font-semibold text-slate-950 dark:text-white">활성 에이전트</h2>
-              <span id="active-agents-count" class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950/70 dark:text-blue-300">0</span>
+              <h2 id="agents-title" class="section-title text-base">활성 에이전트</h2>
+              <span id="active-agents-count" class="rounded-full px-2.5 py-0.5 text-xs font-bold mono-number"
+                    style="background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);">0</span>
             </div>
-            <ul id="active-agents" class="space-y-2 text-sm" aria-live="polite">
-              <li class="rounded-md border border-dashed border-slate-300 px-3 py-2 text-slate-500 dark:border-slate-700 dark:text-slate-400">대기 중</li>
+            <ul id="active-agents" class="flex flex-wrap gap-2" aria-live="polite">
+              <li class="rounded-md border border-dashed px-3 py-2 text-xs text-[color:var(--text-muted)]"
+                  style="border-color: var(--border-strong)">대기 중</li>
             </ul>
           </section>
 
-          <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900" aria-labelledby="events-title">
+          <section class="dashboard-card p-6" aria-labelledby="events-title">
             <div class="mb-4 flex items-center justify-between gap-3">
-              <h2 id="events-title" class="text-lg font-semibold text-slate-950 dark:text-white">최근 이벤트</h2>
-              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">최근 10개</span>
+              <h2 id="events-title" class="section-title text-base">최근 이벤트</h2>
+              <span class="text-xs font-medium text-[color:var(--text-muted)]">최근 10개</span>
             </div>
-            <ol id="recent-events" class="space-y-3 text-sm" aria-live="polite">
-              <li class="rounded-md border border-dashed border-slate-300 px-3 py-2 text-slate-500 dark:border-slate-700 dark:text-slate-400">이벤트 없음</li>
+            <ol id="recent-events" class="space-y-1.5" aria-live="polite">
+              <li class="rounded-md border border-dashed px-3 py-2 text-xs text-[color:var(--text-muted)]"
+                  style="border-color: var(--border-strong)">이벤트 없음</li>
             </ol>
           </section>
         </aside>
       </main>
+
+      <footer class="pb-3 pt-2 text-center text-xs text-[color:var(--text-dim)]">
+        Phase 1 PoC · STATE.json singleton · atomic writes · 5-pane tmux orchestration
+      </footer>
     </div>
-
-    <template id="chapter-card-template">
-      <article class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <p data-chapter-num class="text-sm font-medium text-slate-500 dark:text-slate-400">Chapter</p>
-            <h3 data-chapter-title class="mt-1 truncate text-lg font-semibold text-slate-950 dark:text-white">-</h3>
-          </div>
-          <span
-            data-chapter-status
-            class="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 ring-1 ring-gray-300 dark:bg-gray-900/60 dark:text-gray-300 dark:ring-gray-700"
-          >
-            queued
-          </span>
-        </div>
-
-        <div class="mt-5 space-y-3">
-          <div data-task-role="decomposer" class="rounded-md border border-slate-200 p-3 dark:border-slate-800">
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">decomposer</span>
-              <span data-task-status class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-900/60 dark:text-gray-300">queued</span>
-            </div>
-            <p data-task-review class="mt-1 text-xs text-slate-500 dark:text-slate-400">review 0/3</p>
-          </div>
-          <div data-task-role="composer" class="rounded-md border border-slate-200 p-3 dark:border-slate-800">
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">composer</span>
-              <span data-task-status class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-900/60 dark:text-gray-300">queued</span>
-            </div>
-            <p data-task-review class="mt-1 text-xs text-slate-500 dark:text-slate-400">review 0/3</p>
-          </div>
-          <div data-task-role="designer" class="rounded-md border border-slate-200 p-3 dark:border-slate-800">
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">designer</span>
-              <span data-task-status class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-900/60 dark:text-gray-300">queued</span>
-            </div>
-            <p data-task-review class="mt-1 text-xs text-slate-500 dark:text-slate-400">review 0/3</p>
-          </div>
-          <div data-task-role="developer" class="rounded-md border border-slate-200 p-3 dark:border-slate-800">
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">developer</span>
-              <span data-task-status class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-900/60 dark:text-gray-300">queued</span>
-            </div>
-            <p data-task-review class="mt-1 text-xs text-slate-500 dark:text-slate-400">review 0/3</p>
-          </div>
-        </div>
-      </article>
-    </template>
 
     <script src="poll.js"></script>
   </body>
