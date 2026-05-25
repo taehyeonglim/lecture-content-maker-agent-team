@@ -1,0 +1,54 @@
+{
+  "updated_at": "2026-05-25",
+  "sources": [
+    "https://www.anthropic.com/pricing#api",
+    "https://openai.com/api/pricing/"
+  ],
+  "currency": "USD",
+  "unit": "per 1M tokens",
+  "_comment": "단가는 정기 변동합니다. 변경 시 이 파일만 수정하면 record-usage.sh + 대시보드가 자동 반영. fallback_input_ratio 는 codex 같이 input/output 분리 보고가 없을 때 사용하는 추정 비율 (70% input, 30% output).",
+  "fallback_input_ratio": 0.7,
+  "models": {
+    "claude-sonnet-4-6": {
+      "input_per_1m": 3.00,
+      "output_per_1m": 15.00,
+      "_note": "Phase 1 워커 4개 (decomposer/composer/designer/developer)"
+    },
+    "claude-opus-4-7": {
+      "input_per_1m": 5.00,
+      "output_per_1m": 25.00,
+      "_note": "director"
+    },
+    "gpt-5.5": {
+      "input_per_1m": 5.00,
+      "cached_input_per_1m": 0.50,
+      "output_per_1m": 30.00,
+      "_note": "decomposer(medium)/composer(high)/reviewer(xhigh) — effort 는 단가 영향 없음, 토큰 사용량에만 영향"
+    },
+    "gpt-image-2": {
+      "input_per_1m": 5.00,
+      "cached_input_per_1m": 1.25,
+      "output_per_1m": 30.00,
+      "image_input_per_1m": 8.00,
+      "image_cached_input_per_1m": 2.00,
+      "image_output_per_1m": 30.00,
+      "_note": "fetch-image.sh fallback (Wikimedia 라이선스 후보 없을 때)"
+    }
+  },
+  "aliases": {
+    "sonnet": "claude-sonnet-4-6",
+    "sonnet-latest": "claude-sonnet-4-6",
+    "claude-sonnet": "claude-sonnet-4-6",
+    "opus": "claude-opus-4-7",
+    "opus-latest": "claude-opus-4-7",
+    "opus-4-7": "claude-opus-4-7",
+    "claude-opus": "claude-opus-4-7",
+    "gpt-5-5": "gpt-5.5",
+    "gpt-5.5-medium": "gpt-5.5",
+    "gpt-5.5-high": "gpt-5.5",
+    "gpt-5.5-xhigh": "gpt-5.5",
+    "gpt-image-gen": "gpt-image-2",
+    "gpt-image-1": "gpt-image-2",
+    "dall-e-3": "gpt-image-2"
+  }
+}

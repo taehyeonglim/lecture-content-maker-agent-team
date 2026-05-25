@@ -14,7 +14,7 @@ color: green
   ```bash
   codex exec --model gpt-5.5 -c model_reasoning_effort=high \
     -c sandbox_mode="workspace-write" "<prompt>" 2>&1 | tee /tmp/codex-composer-${TASK_ID}.log
-  bash scripts/record-usage.sh ${CHAPTER_ID} composer /tmp/codex-composer-${TASK_ID}.log <duration_sec>
+  bash scripts/record-usage.sh ${CHAPTER_ID} composer /tmp/codex-composer-${TASK_ID}.log <duration_sec> gpt-5.5
   ```
 - 종료 시 sentinel:
   ```bash

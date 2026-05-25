@@ -15,9 +15,9 @@ color: yellow
   codex exec --model gpt-5.5 -c model_reasoning_effort=medium \
     -c sandbox_mode="workspace-write" "<prompt>" 2>&1 | tee /tmp/codex-decomposer-${TASK_ID}.log
   ```
-- codex 호출 직후 토큰·시간 기록:
+- codex 호출 직후 토큰·시간·USD 기록 (모델명을 5번째 인자로 전달하면 config/pricing.json 으로 USD 환산):
   ```bash
-  bash scripts/record-usage.sh ${CHAPTER_ID} decomposer /tmp/codex-decomposer-${TASK_ID}.log <duration_sec>
+  bash scripts/record-usage.sh ${CHAPTER_ID} decomposer /tmp/codex-decomposer-${TASK_ID}.log <duration_sec> gpt-5.5
   ```
 - 작업 종료 시 sentinel 파일 생성:
   ```bash

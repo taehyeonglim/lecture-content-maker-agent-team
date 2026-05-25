@@ -188,13 +188,11 @@ update_state_manual_override() {
 }
 
 record_usage_from_output() {
-  # reviewer 호출의 토큰 + duration을 record-usage.sh로 STATE.json에 누적.
-  # reviewer는 chapter.tasks[].role(decomposer/composer/designer/developer)과 직접 매칭되지 않으므로
-  # top-level usage만 증가하고 task별 usage는 reviewer 라운드 별도 추적은 안 함.
-  # (필요 시 별도 reviewer task entry를 만드는 방향으로 확장 가능)
+  # reviewer 호출의 토큰 + duration + USD를 record-usage.sh로 STATE.json에 누적.
+  # reviewer 는 항상 codex gpt-5.5 xhigh effort 이므로 모델은 gpt-5.5 로 고정.
   local output_file="$1"
   local duration_sec="${2:-0}"
-  bash scripts/record-usage.sh "$CHAPTER_ID" "reviewer" "$output_file" "$duration_sec" || true
+  bash scripts/record-usage.sh "$CHAPTER_ID" "reviewer" "$output_file" "$duration_sec" "gpt-5.5" || true
 }
 
 run_codex_with_retry() {

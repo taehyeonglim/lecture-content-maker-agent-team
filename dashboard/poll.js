@@ -192,7 +192,10 @@ function renderTask(role, task) {
   const usagePart = (task && task.usage && (task.usage.tokens || task.usage.calls))
     ? ` · ${formatTokens(task.usage.tokens)} 토큰 (${toNumber(task.usage.calls)}회)`
     : "";
-  meta.textContent = `검수 통과 ${reviewsPassed}/3${model}${usagePart}`;
+  const costPart = (task && task.cost_usd && toNumber(task.cost_usd) > 0)
+    ? ` · ${formatCurrency(task.cost_usd)}`
+    : "";
+  meta.textContent = `검수 통과 ${reviewsPassed}/3${model}${usagePart}${costPart}`;
 
   item.append(header, bar, meta);
   return item;
@@ -293,6 +296,8 @@ function updateDashboard(state) {
   setText("cumulative-usage", `${tokens} 토큰 · ${calls} 호출`);
   const durSec = deriveSessionDurationSec(usage);
   setText("session-duration", `세션 시간: ${durSec > 0 ? formatDuration(durSec) : "-"}`);
+  // 누적 USD 환산 비용 (config/pricing.json 기준, record-usage.sh가 누적)
+  setText("cumulative-cost", formatCurrency(state.cumulative_cost_usd));
   renderChapters(state.chapters);
   renderActiveAgents(state.active_agents);
   renderRecentEvents(state.recent_events);
@@ -314,6 +319,7 @@ async function pollState() {
     updateOverallProgress(0);
     setText("cumulative-usage", "0 토큰 · 0 호출");
     setText("session-duration", "세션 시간: -");
+    setText("cumulative-cost", "$0.00");
     setText("updated-at", "업데이트 없음");
     const updatedAt = getElement("updated-at");
     if (updatedAt) updatedAt.removeAttribute("datetime");

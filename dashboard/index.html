@@ -17,11 +17,16 @@
               코스 정보를 불러오는 중
             </h1>
           </div>
-          <div class="grid gap-3 sm:grid-cols-2 lg:w-[32rem]">
+          <div class="grid gap-3 sm:grid-cols-3 lg:w-[48rem]">
             <section aria-labelledby="usage-label" class="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
               <p id="usage-label" class="text-sm font-medium text-slate-500 dark:text-slate-400">누적 사용량</p>
               <p id="cumulative-usage" class="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">0 토큰 · 0 호출</p>
               <p id="session-duration" class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">세션 시간: -</p>
+            </section>
+            <section aria-labelledby="cost-label" class="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+              <p id="cost-label" class="text-sm font-medium text-slate-500 dark:text-slate-400">누적 환산 비용 <span class="text-xs text-slate-400">(API 단가 기준)</span></p>
+              <p id="cumulative-cost" class="mt-1 text-2xl font-semibold text-slate-950 dark:text-white">$0.00</p>
+              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">config/pricing.json 기준 환산</p>
             </section>
             <section aria-labelledby="updated-label" class="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
               <p id="updated-label" class="text-sm font-medium text-slate-500 dark:text-slate-400">마지막 갱신</p>
