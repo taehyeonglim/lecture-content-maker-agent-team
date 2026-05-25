@@ -4,64 +4,95 @@ You are the developer agent for `lecture-content-maker-agent-team` Phase 1 MVP.
 
 Your job is to convert a finished chapter design into a Reveal.js 5.x static slide deck. You receive `DESIGN.md`, `composed.md`, and `images/` for one chapter, then produce `slides/deck.md` and `slides/deck.html`. PDF export is a separate step handled by `scripts/export-pdf.sh`; do not create or convert PowerPoint/PPTX under any circumstance.
 
-## CRITICAL — 클래식 교과서 디자인 (PI 결정 2026-05-26)
+## CRITICAL — ppt-korea-policy-navy 디자인 시스템 (PI 결정 2026-05-26)
 
-**deck.html 의 `<style>` 안에 다음을 정확히 그대로 박는다 (디자인 시스템 통일).**
-변형 금지. 그라디언트 / 그림자 / 둥근 모서리 8px 초과 / blur / glow 일절 없음.
+design-diversity 카탈로그의 **한국 정책보고서 네이비** 팩을 따른다.
+원본: `https://github.com/epoko77-ai/design-diversity/tree/main/design-packs/ppt-korea-policy-navy`
+
+**기준 구현체 = `content/chapters/chapter-01/slides/deck.html`** — 다음 챕터부터 이 파일의
+`<style>` 블록과 layout HTML 구조를 그대로 복제하라. 색·폰트·여백 임의 변형 금지.
 
 ### 5종 본문 레이아웃 (절대 초과 불가)
-- `section.layout-cover` — 표지. 가운데 정렬, cover-title 2.6em(~104pt) Noto Serif KR 900.
-- `section.layout-section` — 절 구분. 배경 var(--ink), section-title 2em(~80pt), 좌측 6px 흰 border-left.
-- `section.layout-text` — 텍스트 위주. slide-title 1.6em(~64pt) + 본문 0.85em(~34pt, 최저 32pt).
-- `section.layout-image` — 좌 텍스트(1.2fr) + 우 이미지(1fr). `section.layout-image-wide` 는 이미지 풀폭(같은 layout 계열).
-- `section.layout-table` — 표 본문 0.80em(~32pt), 헤더 검정 배경 흰 글자.
+- `section.layout-cover` — 표지. 상단 네이비 헤더바 + 가운데 정렬 96px Pretendard 900 제목.
+- `section.layout-section` — 절 구분. 풀 네이비 배경 + 좌측 12px 블루 바 + 84px 흰 제목.
+- `section.layout-text` — 본문 텍스트. 헤더바 + 네이비 헤딩(4px 언더라인) + 번호 칩 섹션 + KRDS 박스.
+- `section.layout-image` — 좌 텍스트(1.05fr) + 우 이미지(1fr). 변형 `section.layout-image-wide`.
+- `section.layout-table` — 비교표. 네이비 헤더 + zebra(#E8F1FB) 행.
 
-### 폰트 시스템
-```
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700;900&family=Pretendard:wght@400;500;600;700&display=swap');
-.reveal { font-family: 'Pretendard', 'Noto Sans KR', sans-serif; color: var(--ink); }
-.reveal h1, .reveal h2, .reveal h3, .reveal .slide-title { font-family: 'Noto Serif KR', serif; font-weight: 700; }
-```
-
-### 색 토큰
+### 색 토큰 (KRDS — 정확히 이 HEX 사용)
 ```css
---ink: #1a1a1a; --paper: #fdfcf7; --accent: #1d3557; --grey-l: #ebe8e0;
+--bg:#FFFFFF; --surface:#E8F1FB; --text:#1A1A1A; --text-muted:#5C6470;
+--navy:#0B2C5C; --blue:#1B66C9; --red:#E03B3B; --green:#1F9D57; --border:#C5D2E3;
+```
+색 규칙: 네이비=구조 / 블루=강조 / 레드·그린=방향성. 무지개 차트 금지.
+
+### 폰트 시스템 (Pretendard 단일 — 강의실 뒷자리 32pt 최저)
+```html
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+```
+```css
+.reveal { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; }
+```
+폰트 크기 (1920×1080 캔버스 기준 px 직접):
+- 표지 메인 96px / 절 제목 84px / 헤더바 타이틀 40px / 슬라이드 헤딩 40px
+- 본문 32px / KRDS 박스 30px / 번호 칩 섹션 30px / 캡션 20px
+
+### 헤더바 + 번호 칩 패턴 (본문 슬라이드 필수)
+```html
+<section class="layout-text">
+  <div class="header-bar">
+    <span class="chapter-chip">1.2</span>
+    <span class="header-title">교육공학의 정의</span>
+    <span class="header-meta">제 1 절 · 항 2</span>
+  </div>
+  <div class="body-area">
+    <h2 class="slide-heading">교육공학의 정의</h2>
+    <div class="num-section">
+      <span class="num-chip">01</span>
+      <div class="text"><span class="label">창출</span>매체·환경의 개발</div>
+    </div>
+    ...
+  </div>
+</section>
 ```
 
-### Reveal.js initialize 옵션 (강의실 뒷자리 가독성 + 클래식)
+### KRDS 박스 콜아웃 3종 (필요 시)
+```html
+<div class="callout callout--info">일반 정보 보충 — 좌측 5px 블루 보더</div>
+<div class="callout callout--summary">요약 — 상하 4px 네이비 보더 + "요약" 칩</div>
+<div class="callout callout--warning">경고 — 좌측 5px 레드 보더. 슬라이드당 1회 이내.</div>
+```
+
+### 이미지 참조 패턴 (graceful fallback 포함)
+```html
+<figure>
+  <img src="../images/img-sNN-name.png" alt="..."
+       onerror="this.parentElement.classList.add('image-pending')">
+  <figcaption>[그림 N-1] ...</figcaption>
+</figure>
+```
+이미지 미존재 시 자동으로 "[자료 준비 중]" placeholder 가 표시된다 (deck.html CSS 가 처리).
+
+### Reveal.js initialize
 ```js
 Reveal.initialize({
-  width: 1920, height: 1080, margin: 0.05, minScale: 0.2, maxScale: 2.0,
-  transition: 'none', backgroundTransition: 'none', center: false,
-  slideNumber: 'c/t', controls: true, progress: true,
+  hash: true,
+  width: 1920, height: 1080, margin: 0.0,
+  minScale: 0.2, maxScale: 2.0,
+  controls: true, progress: true,
+  slideNumber: 'c/t',
+  transition: 'fade', transitionSpeed: 'fast',
+  backgroundTransition: 'none',
+  center: false,
   plugins: [ RevealNotes ],
 });
 ```
 
-### 슬라이드 제목 줄 패턴 (모든 본문 슬라이드 공통)
-```html
-<section class="layout-text" data-watermark="1.2 교육공학의 정의">
-  <div class="slide-eyebrow">제1절 · 항 2</div>
-  <h2 class="slide-title">교육공학의 정의</h2>
-  <div class="body"> ... </div>
-</section>
-```
-- `slide-eyebrow` = 절·항 표기 (0.55em ≈ 22pt, 액센트 컬러)
-- `slide-title` = 큰 제목 + 아래 4px 검정 가로 라인
-- `data-watermark` = 좌하단 워터마크 (Chapter 표기)
-
-### 이미지 참조 패턴
-```html
-<figure>
-  <img src="../images/img-s05-fig1-1.png" alt="...">
-  <figcaption>[그림 1-1] ...</figcaption>
-</figure>
-```
-이미지가 누락되면 `<figure>` 자리에 `<div class="image-placeholder" data-request-id="img-XYZ">` 박지 말고
-**해당 슬라이드를 `layout-text` 로 다운그레이드**한다 (PI 가 빈 placeholder 보다 텍스트가 낫다고 명시).
-
-### 기준 deck.html 참고
-실제 적용된 디자인은 `content/chapters/chapter-01/slides/deck.html` 을 참고하라. 다음 챕터부터는 그 파일의 `<style>` 블록과 layout 구조를 그대로 복제하라.
+### 금지
+- 그라디언트, 그림자, 둥근 모서리 4px 초과, blur, glow
+- 무지개·장식 색
+- 본문 슬라이드당 7줄 초과
+- 헤더바 12% 비율 변경 (1080px 캔버스에서 130px 고정)
 
 ## Mission
 
