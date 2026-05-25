@@ -1,6 +1,9 @@
-const POLL_INTERVAL_MS = 5000;
+const POLL_INTERVAL_MS = 2000;
+const MAX_HISTORY_POINTS = 180;  // 2초 × 180 = 6분 슬라이딩 윈도우
 const STATE_URL = "/STATE.json";
 const TASK_ROLES = ["decomposer", "composer", "designer", "developer"];
+const usageHistory = [];  // {ts: Date, tokens, cost, calls} 시계열
+let usageChart = null;
 
 const STATUS_STYLES = {
   queued: { label: "대기", color: "#6b7280", background: "#f3f4f6", border: "#d1d5db" },
@@ -61,6 +64,127 @@ function formatDuration(seconds) {
   const h = Math.floor(m / 60);
   const rm = m % 60;
   return `${h}시간 ${rm}분`;
+}
+
+function appendUsageSample(state) {
+  const u = state.usage || {};
+  const ts = state.updated_at ? new Date(state.updated_at) : new Date();
+  // 직전 sample 과 동일한 timestamp 면 마지막 값만 갱신 (중복 점 방지)
+  const last = usageHistory[usageHistory.length - 1];
+  const sample = {
+    ts,
+    tokens: toNumber(u.total_tokens),
+    cost: toNumber(state.cumulative_cost_usd),
+    calls: toNumber(u.call_count),
+  };
+  if (last && last.ts.getTime() === ts.getTime()) {
+    usageHistory[usageHistory.length - 1] = sample;
+  } else {
+    usageHistory.push(sample);
+    while (usageHistory.length > MAX_HISTORY_POINTS) usageHistory.shift();
+  }
+}
+
+function fmtChartTime(date) {
+  const h = String(date.getHours()).padStart(2, "0");
+  const m = String(date.getMinutes()).padStart(2, "0");
+  const s = String(date.getSeconds()).padStart(2, "0");
+  return `${h}:${m}:${s}`;
+}
+
+function initUsageChart() {
+  const canvas = document.getElementById("usage-chart");
+  if (!canvas || typeof Chart === "undefined") return;
+  const ctx = canvas.getContext("2d");
+  usageChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: "누적 토큰",
+          data: [],
+          borderColor: "#2563eb",
+          backgroundColor: "rgba(37, 99, 235, 0.12)",
+          yAxisID: "yTokens",
+          tension: 0.25,
+          fill: true,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          borderWidth: 2,
+        },
+        {
+          label: "누적 비용 (USD)",
+          data: [],
+          borderColor: "#f59e0b",
+          backgroundColor: "rgba(245, 158, 11, 0.0)",
+          borderDash: [5, 4],
+          yAxisID: "yCost",
+          tension: 0.25,
+          fill: false,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        x: {
+          ticks: {
+            autoSkip: true,
+            maxTicksLimit: 8,
+            font: { size: 10 },
+          },
+          grid: { display: false },
+        },
+        yTokens: {
+          type: "linear",
+          position: "left",
+          beginAtZero: true,
+          ticks: {
+            callback: function (v) { return formatTokens(v); },
+            font: { size: 10 },
+          },
+          title: { display: true, text: "토큰", font: { size: 11 } },
+        },
+        yCost: {
+          type: "linear",
+          position: "right",
+          beginAtZero: true,
+          ticks: {
+            callback: function (v) { return "$" + Number(v).toFixed(2); },
+            font: { size: 10 },
+          },
+          title: { display: true, text: "USD", font: { size: 11 } },
+          grid: { drawOnChartArea: false },
+        },
+      },
+      plugins: {
+        legend: { position: "bottom", labels: { font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: function (item) {
+              if (item.dataset.yAxisID === "yCost") return `누적 비용: $${item.parsed.y.toFixed(4)}`;
+              return `누적 토큰: ${formatTokens(item.parsed.y)}`;
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+function updateUsageChart() {
+  if (!usageChart) return;
+  usageChart.data.labels = usageHistory.map((p) => fmtChartTime(p.ts));
+  usageChart.data.datasets[0].data = usageHistory.map((p) => p.tokens);
+  usageChart.data.datasets[1].data = usageHistory.map((p) => p.cost);
+  usageChart.update("none");
 }
 
 function deriveSessionDurationSec(usage) {
@@ -304,6 +428,9 @@ function updateDashboard(state) {
   setText("updated-at", formatDateTime(state.updated_at));
   const updatedAt = getElement("updated-at");
   if (updatedAt) updatedAt.setAttribute("datetime", state.updated_at || "");
+  // 시계열 sample 누적 + chart 업데이트
+  appendUsageSample(state);
+  updateUsageChart();
 }
 
 async function pollState() {
@@ -350,6 +477,7 @@ function handleVisibilityChange() {
 }
 
 window.addEventListener("load", () => {
+  initUsageChart();
   pollState();
   startPolling();
 });
