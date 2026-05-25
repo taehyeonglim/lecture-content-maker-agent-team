@@ -194,8 +194,9 @@ start_dashboard() {
   fi
 
   if port_is_free "$DASHBOARD_PORT"; then
-    nohup python3 -m http.server -d dashboard "$DASHBOARD_PORT" >/dev/null 2>&1 &
-    echo "Dashboard server started on http://127.0.0.1:${DASHBOARD_PORT}"
+    # 프로젝트 루트에서 서빙 — poll.js가 /STATE.json 절대 경로로 fetch할 수 있게
+    nohup python3 -m http.server -d . "$DASHBOARD_PORT" >/dev/null 2>&1 &
+    echo "Dashboard server started on http://127.0.0.1:${DASHBOARD_PORT}/dashboard/"
   else
     echo "Dashboard port ${DASHBOARD_PORT} is already in use; assuming a server is already running."
   fi
@@ -280,7 +281,7 @@ ROOT_QUOTED="$(shell_quote "$PROJECT_ROOT")"
 
 if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
   echo "$DASHBOARD_STATUS"
-  echo "Dashboard URL: http://127.0.0.1:${DASHBOARD_PORT}"
+  echo "Dashboard URL: http://127.0.0.1:${DASHBOARD_PORT}/dashboard/"
   echo "Existing tmux session found. Attaching: tmux attach -t ${SESSION_NAME}"
   if [[ -t 1 ]]; then
     exec tmux attach-session -t "$SESSION_NAME"
@@ -292,5 +293,5 @@ create_session "$CHAPTER_ID" "$PROJECT_ROOT" "$ROOT_QUOTED" "$RESUME_NOTE"
 
 echo "$DASHBOARD_STATUS"
 echo "$RESUME_NOTE"
-echo "Dashboard URL: http://127.0.0.1:${DASHBOARD_PORT}"
+echo "Dashboard URL: http://127.0.0.1:${DASHBOARD_PORT}/dashboard/"
 echo "Tmux attach: tmux attach -t ${SESSION_NAME}"

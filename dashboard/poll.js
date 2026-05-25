@@ -1,5 +1,5 @@
 const POLL_INTERVAL_MS = 5000;
-const STATE_URL = "../STATE.json";
+const STATE_URL = "/STATE.json";
 const TASK_ROLES = ["decomposer", "composer", "designer", "developer"];
 
 const STATUS_STYLES = {
