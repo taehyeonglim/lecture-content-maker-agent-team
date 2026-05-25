@@ -350,7 +350,7 @@ function renderTask(role, task) {
 
   const header = createElement("div", "flex items-center justify-between gap-2");
   header.append(
-    createElement("span", "text-sm font-semibold tracking-tight", role),
+    createElement("span", "text-xs font-semibold tracking-tight", role),
     renderStatusBadge(status),
   );
 
@@ -360,18 +360,17 @@ function renderTask(role, task) {
   fill.style.background = getStatusColor(status);
   bar.append(fill);
 
-  const meta = createElement("div", "mt-2 text-[11px] leading-snug",
-    "");
+  const meta = createElement("div", "mt-1 text-[10px] leading-tight");
   meta.style.color = "var(--text-muted)";
   const reviewsPassed = task && task.reviews_passed !== undefined ? toNumber(task.reviews_passed) : 0;
   const model = task && task.model ? ` · ${task.model}` : "";
   const usagePart = (task && task.usage && (task.usage.tokens || task.usage.calls))
-    ? ` · ${formatTokens(task.usage.tokens)} 토큰 (${toNumber(task.usage.calls)}회)`
+    ? ` · ${formatTokens(task.usage.tokens)}t(${toNumber(task.usage.calls)})`
     : "";
   const costPart = (task && task.cost_usd && toNumber(task.cost_usd) > 0)
     ? ` · ${formatCurrency(task.cost_usd)}`
     : "";
-  meta.textContent = `검수 ${reviewsPassed}/3${model}${usagePart}${costPart}`;
+  meta.textContent = `검수${reviewsPassed}/3${model}${usagePart}${costPart}`;
 
   item.append(header, bar, meta);
   return item;
@@ -380,13 +379,13 @@ function renderTask(role, task) {
 function renderChapterCard(chapter) {
   const chapterData = chapter || {};
   const card = createElement("article", "chapter-card");
-  const header = createElement("div", "mb-4 flex items-start justify-between gap-3");
+  const header = createElement("div", "mb-2.5 flex items-start justify-between gap-3");
   const titleGroup = createElement("div", "min-w-0");
   const num = chapterData.num != null ? `Chapter ${String(chapterData.num).padStart(2, "0")}` : (chapterData.id || "Chapter");
-  const numEl = createElement("p", "text-[10px] font-bold tracking-[0.18em] uppercase");
+  const numEl = createElement("p", "text-[9px] font-bold tracking-[0.18em] uppercase");
   numEl.style.color = "var(--accent)";
   numEl.textContent = num;
-  const titleEl = createElement("h3", "mt-1 truncate text-lg font-bold tracking-tight");
+  const titleEl = createElement("h3", "truncate text-sm font-bold tracking-tight");
   titleEl.style.color = "var(--text-strong)";
   titleEl.textContent = chapterData.title || "제목 없음";
   titleGroup.append(numEl, titleEl);
@@ -397,7 +396,7 @@ function renderChapterCard(chapter) {
       .filter((task) => task && task.role)
       .map((task) => [task.role, task]),
   );
-  const taskGrid = createElement("div", "grid gap-2.5 md:grid-cols-2");
+  const taskGrid = createElement("div", "grid gap-1.5 md:grid-cols-2");
   TASK_ROLES.forEach((role) => taskGrid.append(renderTask(role, taskMap.get(role))));
 
   card.append(header, taskGrid);
@@ -467,15 +466,24 @@ function renderRecentEvents(events) {
     .forEach((event) => {
       const eventData = event || {};
       const item = createElement("li", "event-row");
-      const time = createElement("time", "block text-[10px] font-medium uppercase tracking-wider");
+      // 한 줄에 시각+요약 컴팩트 배치
+      const time = createElement("span", "mono-number mr-2 text-[9px] font-bold uppercase tracking-wider");
       time.style.color = "var(--text-muted)";
-      time.textContent = formatDateTime(eventData.ts);
-      const summary = createElement("p", "mt-0.5 text-sm font-medium leading-snug");
+      time.textContent = formatShortTime(eventData.ts);
+      const summary = createElement("span", "text-[11px] font-medium leading-snug");
       summary.style.color = "var(--text-strong)";
       summary.textContent = eventSummary(eventData);
       item.append(time, summary);
       container.append(item);
     });
+}
+
+function formatShortTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  const h = String(date.getHours()).padStart(2, "0");
+  const m = String(date.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
 }
 
 function updateDashboard(state) {
@@ -485,15 +493,16 @@ function updateDashboard(state) {
   const usage = state.usage || {};
   const tokens = formatTokens(usage.total_tokens);
   const calls = toNumber(usage.call_count);
-  setText("cumulative-usage", `${tokens} 토큰 · ${calls} 호출`);
+  setText("cumulative-usage", `${tokens} 토큰`);  // chip value — 토큰만
   const durSec = deriveSessionDurationSec(usage);
-  setText("session-duration", `세션 시간: ${durSec > 0 ? formatDuration(durSec) : "-"}`);
+  setText("session-duration", `${calls}회 · ${durSec > 0 ? formatDuration(durSec) : "-"}`);  // sub — 호출수·시간
   // 누적 USD 환산 비용 (config/pricing.json 기준, record-usage.sh가 누적)
   setText("cumulative-cost", formatCurrency(state.cumulative_cost_usd));
   renderChapters(state.chapters);
   renderActiveAgents(state.active_agents);
   renderRecentEvents(state.recent_events);
-  setText("updated-at", formatDateTime(state.updated_at));
+  // 컴팩트 시각 표시 (HH:MM only)
+  setText("updated-at", formatShortTime(state.updated_at));
   const updatedAt = getElement("updated-at");
   if (updatedAt) updatedAt.setAttribute("datetime", state.updated_at || "");
   // 시계열 sample 누적 + chart 업데이트
@@ -512,10 +521,10 @@ async function pollState() {
     );
     setText("course-name", "대시보드 준비 중");
     updateOverallProgress(0);
-    setText("cumulative-usage", "0 토큰 · 0 호출");
-    setText("session-duration", "세션 시간: -");
+    setText("cumulative-usage", "0 토큰");
+    setText("session-duration", "0회 · -");
     setText("cumulative-cost", "$0.00");
-    setText("updated-at", "업데이트 없음");
+    setText("updated-at", "-");
     const updatedAt = getElement("updated-at");
     if (updatedAt) updatedAt.removeAttribute("datetime");
     renderChapters([]);
