@@ -276,6 +276,59 @@ body::before {
   50%      { opacity: 1;   transform: scale(1.05); }
 }
 
+/* ─────────────── 완성 교안 항목 + 버튼 ─────────────── */
+.deck-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  background: var(--surface-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.deck-item:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.deck-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border-radius: 6px;
+  background: var(--accent-strong);
+  color: white;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: filter 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25),
+              0 0 12px color-mix(in srgb, var(--accent-glow) 50%, transparent);
+}
+
+.deck-button:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.deck-button-secondary {
+  background: transparent;
+  color: var(--text-strong);
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+
+.deck-button-secondary:hover {
+  background: var(--surface-muted);
+}
+
 /* ─────────────── 활성 에이전트 칩 (펄스 ring) ─────────────── */
 .agent-chip {
   position: relative;

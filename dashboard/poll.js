@@ -438,6 +438,74 @@ function renderActiveAgents(activeAgents) {
   });
 }
 
+function renderCompletedDecks(chapters) {
+  const container = getElement("completed-decks");
+  if (!container) return;
+  clearElement(container);
+
+  // developer task 가 review/done 인 챕터 = deck.html 이 빌드된 상태
+  const completed = (Array.isArray(chapters) ? chapters : [])
+    .map((c) => {
+      if (!c || !Array.isArray(c.tasks)) return null;
+      const dev = c.tasks.find((t) => t && t.role === "developer");
+      if (!dev) return null;
+      const ready = dev.status === "done" || dev.status === "review";
+      return ready ? { chapter: c, dev } : null;
+    })
+    .filter(Boolean);
+
+  setText("completed-decks-count", String(completed.length));
+
+  if (completed.length === 0) {
+    const empty = createElement("li", "rounded-md border border-dashed px-2.5 py-1.5 text-[11px]");
+    empty.style.borderColor = "var(--border-strong)";
+    empty.style.color = "var(--text-muted)";
+    empty.textContent = "아직 완성된 교안 없음";
+    container.append(empty);
+    return;
+  }
+
+  completed.forEach(({ chapter, dev }) => {
+    const item = createElement("li", "deck-item");
+
+    // 좌측: 챕터 번호 + 제목
+    const info = createElement("div", "min-w-0 flex-1");
+    const num = createElement("p", "text-[9px] font-bold tracking-wider uppercase");
+    num.style.color = "var(--accent)";
+    num.textContent = chapter.num != null
+      ? `Chapter ${String(chapter.num).padStart(2, "0")}`
+      : (chapter.id || "Chapter");
+    const title = createElement("p", "truncate text-[12px] font-semibold leading-tight");
+    title.style.color = "var(--text-strong)";
+    title.textContent = chapter.title || "—";
+    info.append(num, title);
+
+    // 우측: 보기 / PDF 버튼 (target=_blank)
+    const actions = createElement("div", "flex shrink-0 gap-1");
+
+    const htmlBtn = document.createElement("a");
+    // 정적 서버가 프로젝트 루트(.)를 서빙하므로 /content/... 절대 경로 사용
+    htmlBtn.href = `/content/chapters/${chapter.id}/slides/deck.html`;
+    htmlBtn.target = "_blank";
+    htmlBtn.rel = "noopener";
+    htmlBtn.className = "deck-button";
+    htmlBtn.textContent = "보기";
+    htmlBtn.setAttribute("aria-label", `${chapter.title || chapter.id} 슬라이드덱을 새 창에서 열기`);
+
+    const pdfBtn = document.createElement("a");
+    pdfBtn.href = `/content/chapters/${chapter.id}/slides/deck.pdf`;
+    pdfBtn.target = "_blank";
+    pdfBtn.rel = "noopener";
+    pdfBtn.className = "deck-button deck-button-secondary";
+    pdfBtn.textContent = "PDF";
+    pdfBtn.setAttribute("aria-label", `${chapter.title || chapter.id} PDF를 새 창에서 열기`);
+
+    actions.append(htmlBtn, pdfBtn);
+    item.append(info, actions);
+    container.append(item);
+  });
+}
+
 function eventSummary(event) {
   const eventData = event || {};
   const parts = [];
@@ -500,6 +568,7 @@ function updateDashboard(state) {
   setText("cumulative-cost", formatCurrency(state.cumulative_cost_usd));
   renderChapters(state.chapters);
   renderActiveAgents(state.active_agents);
+  renderCompletedDecks(state.chapters);
   renderRecentEvents(state.recent_events);
   // 컴팩트 시각 표시 (HH:MM only)
   setText("updated-at", formatShortTime(state.updated_at));
@@ -529,6 +598,7 @@ async function pollState() {
     if (updatedAt) updatedAt.removeAttribute("datetime");
     renderChapters([]);
     renderActiveAgents([]);
+    renderCompletedDecks([]);
     renderRecentEvents([]);
   }
 }

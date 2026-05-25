@@ -109,6 +109,20 @@
             </ul>
           </section>
 
+          <section class="dashboard-card p-3" aria-labelledby="decks-title">
+            <div class="mb-2 flex items-center justify-between gap-3">
+              <h2 id="decks-title" class="section-title text-sm">완성 교안</h2>
+              <span id="completed-decks-count" class="mono-number rounded-full px-2 py-0.5 text-[10px] font-bold"
+                    style="background: color-mix(in srgb, var(--status-done) 18%, transparent);
+                           color: var(--status-done);
+                           border: 1px solid color-mix(in srgb, var(--status-done) 35%, transparent);">0</span>
+            </div>
+            <ul id="completed-decks" class="space-y-1.5" aria-live="polite">
+              <li class="rounded-md border border-dashed px-2.5 py-1.5 text-[11px]"
+                  style="border-color: var(--border-strong); color: var(--text-muted)">아직 완성된 교안 없음</li>
+            </ul>
+          </section>
+
           <section class="dashboard-card flex min-h-0 flex-1 flex-col p-3" aria-labelledby="events-title">
             <div class="mb-2 flex items-center justify-between gap-3">
               <h2 id="events-title" class="section-title text-sm">최근 이벤트</h2>
