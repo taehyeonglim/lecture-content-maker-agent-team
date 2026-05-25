@@ -242,17 +242,42 @@ create_session() {
   local monitor_pane
   local director_message_quoted
   local resume_note_quoted
+  local worker_area
+  local bottom_row
 
   tmux new-session -d -x 180 -y 48 -s "$SESSION_NAME" -n "$chapter_id" -c "$root_dir"
   window_id="$(tmux display-message -p -t "$SESSION_NAME" '#{window_id}')"
   director_pane="$(tmux display-message -p -t "$window_id" '#{pane_id}')"
   tmux set-option -t "$SESSION_NAME" pane-border-status top >/dev/null
 
-  decomposer_pane="$(tmux split-window -h -p 38 -t "$director_pane" -P -F '#{pane_id}' -c "$root_dir")"
-  composer_pane="$(tmux split-window -v -p 80 -t "$decomposer_pane" -P -F '#{pane_id}' -c "$root_dir")"
-  designer_pane="$(tmux split-window -v -p 75 -t "$composer_pane" -P -F '#{pane_id}' -c "$root_dir")"
-  developer_pane="$(tmux split-window -v -p 67 -t "$designer_pane" -P -F '#{pane_id}' -c "$root_dir")"
-  monitor_pane="$(tmux split-window -v -p 50 -t "$developer_pane" -P -F '#{pane_id}' -c "$root_dir")"
+  # 레이아웃: director(좌측, ~35%) | 우측(workers 2x2 그리드 + monitor 하단)
+  #
+  # 최종 모양:
+  #   ┌──────────┬──────────┬──────────┐
+  #   │          │ decompose│ composer │
+  #   │ director ├──────────┼──────────┤
+  #   │          │ designer │ developer│
+  #   │          ├──────────┴──────────┤
+  #   │          │      monitor        │
+  #   └──────────┴─────────────────────┘
+
+  # 1) director(좌) | worker_area(우, 65%)
+  worker_area="$(tmux split-window -h -p 65 -t "$director_pane" -P -F '#{pane_id}' -c "$root_dir")"
+
+  # 2) worker_area = (workers 2x2, 75%) + monitor(25%, 하단)
+  monitor_pane="$(tmux split-window -v -p 25 -t "$worker_area" -P -F '#{pane_id}' -c "$root_dir")"
+
+  # 3) workers 영역(worker_area 가 가리키는 상단)을 top_row + bottom_row 로 50:50 분할
+  bottom_row="$(tmux split-window -v -p 50 -t "$worker_area" -P -F '#{pane_id}' -c "$root_dir")"
+  # worker_area는 이제 top_row(상단)
+
+  # 4) top_row → decomposer(좌) + composer(우)
+  decomposer_pane="$worker_area"
+  composer_pane="$(tmux split-window -h -p 50 -t "$decomposer_pane" -P -F '#{pane_id}' -c "$root_dir")"
+
+  # 5) bottom_row → designer(좌) + developer(우)
+  designer_pane="$bottom_row"
+  developer_pane="$(tmux split-window -h -p 50 -t "$designer_pane" -P -F '#{pane_id}' -c "$root_dir")"
 
   # 시각용 title (Claude Code 부팅 시 "✳ Claude Code"로 덮어써질 수 있음)
   tmux select-pane -t "$director_pane" -T "director"
