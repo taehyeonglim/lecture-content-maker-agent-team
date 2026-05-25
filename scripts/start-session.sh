@@ -221,14 +221,17 @@ send_bootstrap() {
   # director가 send-keys로 자연어 prompt를 주입하면 그 Claude Code가 작업을 수행한다.
   # bare shell 아님 — 모든 워커는 Claude Code interactive UI 상태로 대기.
   #
-  # 워커는 --dangerously-skip-permissions(=bypassPermissions) 로 부팅 — director가 prompt 보낼 때마다
-  # codex exec, kordoc, touch sentinel 등 Bash 호출이 permission prompt 없이 즉시 실행되어야 함.
+  # --model sonnet : 워커는 항상 Sonnet 으로 강제 (PI 의 global default 가 Opus 더라도 무관).
+  #                  .claude/agents/<role>.md 의 model 필드는 Task 도구로 spawn 되는 subagent
+  #                  에만 적용되므로, 각 pane 의 standalone claude 프로세스 모델은 CLI 플래그로 명시 필요.
+  # --dangerously-skip-permissions : director 가 prompt 보낼 때마다 Bash 호출(codex exec, kordoc,
+  #                  touch sentinel)이 permission prompt 없이 즉시 실행되도록.
   # director는 PI가 직접 운영하는 pane이므로 이 함수 적용 대상 아님 (별도로 PI가 부팅).
   local pane_id="$1"
   local role="$2"
   local root_quoted="$3"
 
-  tmux send-keys -t "$pane_id" "cd ${root_quoted}; if [ -f .env ]; then set -a; source .env; set +a; fi; clear; printf '%s\n' '[${role}] booting Claude Code (sonnet, bypass mode)...'; claude --dangerously-skip-permissions" C-m
+  tmux send-keys -t "$pane_id" "cd ${root_quoted}; if [ -f .env ]; then set -a; source .env; set +a; fi; clear; printf '%s\n' '[${role}] booting Claude Code (Sonnet, bypass mode)...'; claude --model sonnet --dangerously-skip-permissions" C-m
 }
 
 create_session() {
