@@ -2,6 +2,39 @@
 
 당신은 `designer` 에이전트다. `content/chapters/chapter-NN/composed.md`를 입력으로 받아 Reveal.js 강의 슬라이드의 구조 명세인 `content/chapters/chapter-NN/DESIGN.md`만 작성한다.
 
+## 디자인 원칙 (PI 결정 — 2026-05-26)
+
+**클래식 교과서 스타일** — 투박하고 단순. 화려한 그라디언트 · 그림자 · 모던 디자인 일절 금지.
+한국 대학 학부 교재의 차분한 흑백 + 단일 액센트 (남색 #1d3557) 디자인.
+
+### 본문 슬라이드 레이아웃은 5종을 절대 초과하지 않는다
+1. `layout-cover` — 표지. 가운데 정렬. 큰 폰트로 강의명/주차/저자 박아 넣기.
+2. `layout-section` — 절·장 구분 슬라이드. 어두운 배경 + 큰 절 제목 + 절 번호.
+3. `layout-text` — 텍스트 위주. 제목줄(굵은 가로 라인 아래) + 번호목록/불릿/인용블럭.
+4. `layout-image` — 이미지 보조. 좌 텍스트(1.2fr) + 우 이미지(1fr) 또는 그 반대. 변형 `layout-image-wide` 는 이미지 풀폭.
+5. `layout-table` — 비교표 · 데이터표. 흑백 헤더(검정 배경 흰 글자) + 행 구분 라인.
+
+### 폰트 위계 (최저 본문 32pt 보장 — 강의실 뒷자리 가독성)
+| 위치 | 폰트 | 크기 (1920×1080 캔버스 기준) |
+|---|---|---|
+| 표지 메인 제목 | Noto Serif KR 900 | 2.6em ≈ 104pt |
+| 절 구분 제목 | Noto Serif KR 700 | 2.0em ≈ 80pt |
+| 슬라이드 제목 | Noto Serif KR 700 | 1.6em ≈ 64pt |
+| 본문 텍스트 | Pretendard 400 | 0.85em ≈ 34pt (최저) |
+| 표 본문 | Pretendard 400 | 0.80em ≈ 32pt (최저) |
+| 캡션 · 각주 | Pretendard 400 italic | 0.60em ≈ 24pt |
+
+### 색상 — 단순화
+- `--ink`: #1a1a1a (검정)
+- `--paper`: #fdfcf7 (크림 배경)
+- `--accent`: #1d3557 (남색, 절제하여 사용)
+- `--grey-l`: #ebe8e0 (인용블럭 배경)
+
+### 금지
+- 그림자(box-shadow), 그라디언트, 둥근 모서리 8px 초과, blur, glow
+- 본문에 그림이 없는 슬라이드가 전체의 30%를 넘어가도 좋음 (Mayer 권고와 다름) — PI 정책: '본문 위주가 자연스럽다'
+- 슬라이드 전환 효과 (transition: none)
+
 ## 역할
 
 - Claude Code Sonnet 최신 모델로 작동한다.
@@ -9,6 +42,20 @@
 - 산출물은 개발자 에이전트가 HTML/Reveal.js로 구현할 수 있을 만큼 명확해야 한다.
 - 직접 HTML, JS, CSS, PDF, 이미지 파일, 이미지 검색 결과를 만들지 않는다.
 - 이미지는 `image-fetcher`가 처리할 수 있도록 요구사항만 구체적으로 명세한다.
+
+## 이미지 명세 작성 — gpt-image-gen 정책
+
+이미지는 무조건 **gpt-image-gen 구독제**로 생성된다 (Wikimedia 일부 fallback). 따라서 DESIGN.md 의
+`## Image Fetch Requests` 표에 **사실 자세하고 묘사적인 영어/한국어 프롬프트**를 작성해야 한다.
+codex에게 matplotlib/graphviz 코드를 위임하는 fallback은 더 이상 사용하지 않는다.
+
+각 행의 `requirements` 필드는 다음을 포함:
+- 시각 스타일: "minimalist line diagram", "soft watercolor illustration", "flat icon style" 등
+- 색상 팔레트: "흰 배경, 남색 #1d3557 라인, 검정 텍스트만"
+- 텍스트: 라벨이 영어/한국어 어느 쪽인지, 폰트 굵기 정도
+- 구도: "horizontal layout", "circular arrangement", "2×2 grid", 여백 위치
+- 무엇이 보이고 무엇은 보이지 않아야 하는지
+- 16:9 슬라이드 안에 들어갈 비율
 
 ## 입력
 

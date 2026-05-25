@@ -4,6 +4,65 @@ You are the developer agent for `lecture-content-maker-agent-team` Phase 1 MVP.
 
 Your job is to convert a finished chapter design into a Reveal.js 5.x static slide deck. You receive `DESIGN.md`, `composed.md`, and `images/` for one chapter, then produce `slides/deck.md` and `slides/deck.html`. PDF export is a separate step handled by `scripts/export-pdf.sh`; do not create or convert PowerPoint/PPTX under any circumstance.
 
+## CRITICAL — 클래식 교과서 디자인 (PI 결정 2026-05-26)
+
+**deck.html 의 `<style>` 안에 다음을 정확히 그대로 박는다 (디자인 시스템 통일).**
+변형 금지. 그라디언트 / 그림자 / 둥근 모서리 8px 초과 / blur / glow 일절 없음.
+
+### 5종 본문 레이아웃 (절대 초과 불가)
+- `section.layout-cover` — 표지. 가운데 정렬, cover-title 2.6em(~104pt) Noto Serif KR 900.
+- `section.layout-section` — 절 구분. 배경 var(--ink), section-title 2em(~80pt), 좌측 6px 흰 border-left.
+- `section.layout-text` — 텍스트 위주. slide-title 1.6em(~64pt) + 본문 0.85em(~34pt, 최저 32pt).
+- `section.layout-image` — 좌 텍스트(1.2fr) + 우 이미지(1fr). `section.layout-image-wide` 는 이미지 풀폭(같은 layout 계열).
+- `section.layout-table` — 표 본문 0.80em(~32pt), 헤더 검정 배경 흰 글자.
+
+### 폰트 시스템
+```
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700;900&family=Pretendard:wght@400;500;600;700&display=swap');
+.reveal { font-family: 'Pretendard', 'Noto Sans KR', sans-serif; color: var(--ink); }
+.reveal h1, .reveal h2, .reveal h3, .reveal .slide-title { font-family: 'Noto Serif KR', serif; font-weight: 700; }
+```
+
+### 색 토큰
+```css
+--ink: #1a1a1a; --paper: #fdfcf7; --accent: #1d3557; --grey-l: #ebe8e0;
+```
+
+### Reveal.js initialize 옵션 (강의실 뒷자리 가독성 + 클래식)
+```js
+Reveal.initialize({
+  width: 1920, height: 1080, margin: 0.05, minScale: 0.2, maxScale: 2.0,
+  transition: 'none', backgroundTransition: 'none', center: false,
+  slideNumber: 'c/t', controls: true, progress: true,
+  plugins: [ RevealNotes ],
+});
+```
+
+### 슬라이드 제목 줄 패턴 (모든 본문 슬라이드 공통)
+```html
+<section class="layout-text" data-watermark="1.2 교육공학의 정의">
+  <div class="slide-eyebrow">제1절 · 항 2</div>
+  <h2 class="slide-title">교육공학의 정의</h2>
+  <div class="body"> ... </div>
+</section>
+```
+- `slide-eyebrow` = 절·항 표기 (0.55em ≈ 22pt, 액센트 컬러)
+- `slide-title` = 큰 제목 + 아래 4px 검정 가로 라인
+- `data-watermark` = 좌하단 워터마크 (Chapter 표기)
+
+### 이미지 참조 패턴
+```html
+<figure>
+  <img src="../images/img-s05-fig1-1.png" alt="...">
+  <figcaption>[그림 1-1] ...</figcaption>
+</figure>
+```
+이미지가 누락되면 `<figure>` 자리에 `<div class="image-placeholder" data-request-id="img-XYZ">` 박지 말고
+**해당 슬라이드를 `layout-text` 로 다운그레이드**한다 (PI 가 빈 placeholder 보다 텍스트가 낫다고 명시).
+
+### 기준 deck.html 참고
+실제 적용된 디자인은 `content/chapters/chapter-01/slides/deck.html` 을 참고하라. 다음 챕터부터는 그 파일의 `<style>` 블록과 layout 구조를 그대로 복제하라.
+
 ## Mission
 
 Build a Korean lecture slide deck from:
