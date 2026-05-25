@@ -1,9 +1,13 @@
 const POLL_INTERVAL_MS = 2000;
 const MAX_HISTORY_POINTS = 180;  // 2초 × 180 = 6분 슬라이딩 윈도우
+const PREVIEW_RELOAD_INTERVAL_MS = 5000;  // deck.html mtime 폴링 주기
 const STATE_URL = "/STATE.json";
 const TASK_ROLES = ["decomposer", "composer", "designer", "developer"];
 const usageHistory = [];  // {ts: Date, tokens, cost, calls} 시계열
 let usageChart = null;
+let previewChapterId = null;  // 현재 미리보기 중인 챕터 id
+let previewLastMtime = null;  // 직전 deck.html 의 Last-Modified
+let previewReloadTimer = null;
 
 // status → 한글 라벨 (시각은 CSS .status-pill .status-<key> 에서 처리)
 const STATUS_LABELS = {
@@ -376,46 +380,72 @@ function renderTask(role, task) {
   return item;
 }
 
-function renderChapterCard(chapter) {
-  const chapterData = chapter || {};
-  const card = createElement("article", "chapter-card");
-  const header = createElement("div", "mb-2.5 flex items-start justify-between gap-3");
-  const titleGroup = createElement("div", "min-w-0");
-  const num = chapterData.num != null ? `Chapter ${String(chapterData.num).padStart(2, "0")}` : (chapterData.id || "Chapter");
-  const numEl = createElement("p", "text-[9px] font-bold tracking-[0.18em] uppercase");
-  numEl.style.color = "var(--accent)";
-  numEl.textContent = num;
-  const titleEl = createElement("h3", "truncate text-sm font-bold tracking-tight");
-  titleEl.style.color = "var(--text-strong)";
-  titleEl.textContent = chapterData.title || "제목 없음";
-  titleGroup.append(numEl, titleEl);
-  header.append(titleGroup, renderStatusBadge(chapterData.status || "queued"));
+function renderChapterRow(chapter) {
+  const c = chapter || {};
+  const row = createElement("li", "chapter-row");
+  row.dataset.chapterId = c.id || "";
+  if (previewChapterId && c.id === previewChapterId) row.classList.add("is-active");
 
+  // 헤더: 번호 + 제목 + 상태 pill
+  const header = createElement("div", "chapter-row-header");
+  const num = createElement("span", "chapter-row-num");
+  num.textContent = c.num != null ? String(c.num).padStart(2, "0") : "??";
+  const title = createElement("span", "chapter-row-title");
+  title.textContent = c.title || c.id || "—";
+  const statusBadge = renderStatusBadge(c.status || "queued");
+  // 좁은 컬럼이라 pill 크기 더 줄임
+  statusBadge.style.padding = "0.125rem 0.375rem";
+  statusBadge.style.fontSize = "0.625rem";
+  header.append(num, title, statusBadge);
+
+  // 4 task 미니 진행도 막대
+  const taskRow = createElement("div", "task-dots");
+  taskRow.title = "decomposer · composer · designer · developer";
   const taskMap = new Map(
-    (Array.isArray(chapterData.tasks) ? chapterData.tasks : [])
-      .filter((task) => task && task.role)
-      .map((task) => [task.role, task]),
+    (Array.isArray(c.tasks) ? c.tasks : [])
+      .filter((t) => t && t.role)
+      .map((t) => [t.role, t])
   );
-  const taskGrid = createElement("div", "grid gap-1.5 md:grid-cols-2");
-  TASK_ROLES.forEach((role) => taskGrid.append(renderTask(role, taskMap.get(role))));
+  TASK_ROLES.forEach((role) => {
+    const task = taskMap.get(role);
+    const status = (task && task.status) || "queued";
+    const progress = getTaskProgress(task);
+    const dot = createElement("div", "task-dot");
+    dot.title = `${role}: ${status}`;
+    const fill = createElement("div", "task-dot-fill");
+    fill.style.width = `${progress}%`;
+    fill.style.background = getStatusColor(status);
+    dot.append(fill);
+    taskRow.append(dot);
+  });
 
-  card.append(header, taskGrid);
-  return card;
+  // 클릭 시 preview 챕터 전환
+  row.addEventListener("click", () => {
+    previewChapterId = c.id;
+    refreshPreviewIframe(true);
+    // 즉시 active class 표시 (다음 polling 까지 기다리지 않게)
+    document.querySelectorAll(".chapter-row").forEach((el) => el.classList.remove("is-active"));
+    row.classList.add("is-active");
+  });
+
+  row.append(header, taskRow);
+  return row;
 }
 
 function renderChapters(chapters) {
-  const grid = getElement("chapter-grid");
-  if (!grid) return;
-  clearElement(grid);
+  const list = getElement("chapter-grid");
+  if (!list) return;
+  clearElement(list);
+  setText("chapters-count", String(Array.isArray(chapters) ? chapters.length : 0));
   if (!Array.isArray(chapters) || chapters.length === 0) {
-    const placeholder = createElement("p", "rounded-md border border-dashed px-4 py-3 text-sm");
+    const placeholder = createElement("li", "rounded-md border border-dashed px-2 py-1.5 text-[11px]");
     placeholder.style.borderColor = "var(--border-strong)";
     placeholder.style.color = "var(--text-muted)";
-    placeholder.textContent = "표시할 챕터가 아직 없습니다.";
-    grid.append(placeholder);
+    placeholder.textContent = "표시할 챕터가 없습니다.";
+    list.append(placeholder);
     return;
   }
-  chapters.forEach((chapter) => grid.append(renderChapterCard(chapter)));
+  chapters.forEach((chapter) => list.append(renderChapterRow(chapter)));
 }
 
 function renderActiveAgents(activeAgents) {
@@ -436,6 +466,125 @@ function renderActiveAgents(activeAgents) {
     const chip = createElement(itemTag, "agent-chip", String(agent));
     container.append(chip);
   });
+}
+
+/* ─────────── 라이브 교안 미리보기 ─────────── */
+
+function pickPreviewChapter(chapters) {
+  // 우선순위: 1) developer 가 running/review/done 인 챕터 (가장 최근)
+  //          2) 명시적으로 클릭된 챕터 (previewChapterId 가 chapters 에 있으면 유지)
+  //          3) chapters 첫 항목
+  if (!Array.isArray(chapters) || chapters.length === 0) return null;
+  if (previewChapterId) {
+    const explicit = chapters.find((c) => c && c.id === previewChapterId);
+    if (explicit) return explicit;
+  }
+  const inProgress = chapters
+    .filter((c) => c && Array.isArray(c.tasks))
+    .find((c) => {
+      const dev = c.tasks.find((t) => t && t.role === "developer");
+      return dev && ["running", "review", "done"].includes(dev.status);
+    });
+  return inProgress || chapters[0];
+}
+
+function deckUrlFor(chapterId) {
+  return `/content/chapters/${chapterId}/slides/deck.html`;
+}
+
+function showPreviewEmpty(show) {
+  const empty = getElement("preview-empty");
+  if (empty) empty.style.display = show ? "flex" : "none";
+}
+
+function refreshPreviewIframe(force = false) {
+  const iframe = getElement("deck-preview");
+  const newTab = getElement("preview-newtab");
+  if (!previewChapterId) {
+    if (iframe) iframe.src = "about:blank";
+    if (newTab) newTab.href = "#";
+    showPreviewEmpty(true);
+    return;
+  }
+  const url = deckUrlFor(previewChapterId);
+  if (newTab) newTab.href = url;
+  if (iframe && (force || iframe.src === "about:blank" || iframe.src.endsWith("about:blank"))) {
+    iframe.src = `${url}?t=${Date.now()}`;
+  }
+}
+
+function updateDeckPreview(state) {
+  const target = pickPreviewChapter(state.chapters);
+  setText("preview-chapter-label", target ? (target.id || "—") : "—");
+
+  if (!target) {
+    previewChapterId = null;
+    refreshPreviewIframe();
+    return;
+  }
+
+  // 챕터 변경 시 iframe src 교체
+  if (target.id !== previewChapterId) {
+    previewChapterId = target.id;
+    previewLastMtime = null;
+    refreshPreviewIframe(true);
+  }
+  // active class 동기화
+  document.querySelectorAll(".chapter-row").forEach((row) => {
+    row.classList.toggle("is-active", row.dataset.chapterId === previewChapterId);
+  });
+}
+
+async function checkPreviewReload() {
+  if (!previewChapterId) return;
+  const url = deckUrlFor(previewChapterId);
+  try {
+    const resp = await fetch(url, { method: "HEAD", cache: "no-store" });
+    if (!resp.ok) {
+      // deck.html 아직 없음
+      showPreviewEmpty(true);
+      return;
+    }
+    const mtime = resp.headers.get("last-modified") || resp.headers.get("Last-Modified");
+    if (mtime && mtime !== previewLastMtime) {
+      previewLastMtime = mtime;
+      const iframe = getElement("deck-preview");
+      if (iframe) iframe.src = `${url}?t=${Date.now()}`;
+      showPreviewEmpty(false);
+    } else if (previewLastMtime) {
+      // 이미 표시 중 — empty placeholder 숨김 유지
+      showPreviewEmpty(false);
+    } else {
+      // 첫 진입에 mtime 만 받은 상태
+      previewLastMtime = mtime;
+      const iframe = getElement("deck-preview");
+      if (iframe) iframe.src = `${url}?t=${Date.now()}`;
+      showPreviewEmpty(false);
+    }
+  } catch (e) {
+    // 무시 (네트워크 일시 오류)
+  }
+}
+
+function startPreviewReload() {
+  if (previewReloadTimer) return;
+  previewReloadTimer = window.setInterval(checkPreviewReload, PREVIEW_RELOAD_INTERVAL_MS);
+}
+
+function stopPreviewReload() {
+  if (!previewReloadTimer) return;
+  window.clearInterval(previewReloadTimer);
+  previewReloadTimer = null;
+}
+
+function setupPreviewControls() {
+  const btn = getElement("preview-reload");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      previewLastMtime = null;
+      refreshPreviewIframe(true);
+    });
+  }
 }
 
 function renderCompletedDecks(chapters) {
@@ -570,6 +719,7 @@ function updateDashboard(state) {
   renderActiveAgents(state.active_agents);
   renderCompletedDecks(state.chapters);
   renderRecentEvents(state.recent_events);
+  updateDeckPreview(state);
   // 컴팩트 시각 표시 (HH:MM only)
   setText("updated-at", formatShortTime(state.updated_at));
   const updatedAt = getElement("updated-at");
@@ -617,14 +767,18 @@ function stopPolling() {
 function handleVisibilityChange() {
   if (document.visibilityState === "hidden") {
     stopPolling();
+    stopPreviewReload();
     return;
   }
   pollState();
   startPolling();
+  startPreviewReload();
 }
 
 window.addEventListener("load", () => {
   initUsageChart();
+  setupPreviewControls();
+  startPreviewReload();
   pollState();
   startPolling();
 });

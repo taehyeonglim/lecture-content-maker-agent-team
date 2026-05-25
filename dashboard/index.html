@@ -53,30 +53,59 @@
         </div>
       </header>
 
-      <!-- ─────────────── MAIN GRID (좌: 챕터 + 차트 / 우: 사이드 패널) ─────────────── -->
-      <main class="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <!-- ─────────────── MAIN GRID (좌: 챕터 리스트 / 중: 미리보기+차트 / 우: 사이드바) ─────────────── -->
+      <main class="grid min-h-0 flex-1 gap-3 lg:grid-cols-[14rem_minmax(0,1fr)_22rem]">
 
-        <!-- 좌측: 챕터 카드 (상단) + 차트 (하단) -->
-        <div class="grid min-h-0 grid-rows-[minmax(0,1fr)_15rem] gap-3">
+        <!-- 좌측: 챕터 진행상황 리스트 (좁고 세로 스크롤) -->
+        <section aria-labelledby="chapters-title"
+                 class="dashboard-card flex min-h-0 flex-col p-3">
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <h2 id="chapters-title" class="section-title text-sm">챕터</h2>
+            <span id="chapters-count" class="mono-number rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                  style="background: color-mix(in srgb, var(--accent) 18%, transparent);
+                         color: var(--accent);
+                         border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);">0</span>
+          </div>
+          <ul id="chapter-grid" class="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1" aria-live="polite">
+            <li class="rounded-md border border-dashed px-2 py-1.5 text-[11px]"
+                style="border-color: var(--border-strong); color: var(--text-muted)">
+              데이터 대기 중...
+            </li>
+          </ul>
+        </section>
 
-          <section aria-labelledby="chapters-title" class="min-h-0 flex flex-col">
+        <!-- 중앙: 교안 미리보기 (상단, flex-1) + 차트 (하단 고정) -->
+        <div class="grid min-h-0 grid-rows-[minmax(0,1fr)_13rem] gap-3">
+
+          <section aria-labelledby="preview-title" class="dashboard-card flex min-h-0 flex-col p-3">
             <div class="mb-2 flex items-center justify-between gap-3">
-              <h2 id="chapters-title" class="section-title text-sm">챕터 진행상황</h2>
-              <div class="flex flex-wrap gap-1.5">
-                <span class="status-pill status-queued"><span class="status-dot"></span>queued</span>
-                <span class="status-pill status-running"><span class="status-dot"></span>running</span>
-                <span class="status-pill status-review"><span class="status-dot"></span>review</span>
-                <span class="status-pill status-done"><span class="status-dot"></span>done</span>
-                <span class="status-pill status-failed"><span class="status-dot"></span>failed</span>
+              <h2 id="preview-title" class="section-title text-sm">교안 미리보기 (라이브)</h2>
+              <div class="flex items-center gap-1.5">
+                <span id="preview-chapter-label" class="mono-number text-[10px] font-bold"
+                      style="color: var(--text-muted)">—</span>
+                <button id="preview-reload" type="button"
+                        class="deck-button deck-button-secondary text-[10px]"
+                        title="iframe 강제 새로고침">
+                  ↻ 새로고침
+                </button>
+                <a id="preview-newtab" href="#" target="_blank" rel="noopener"
+                   class="deck-button text-[10px]" title="새 창에서 열기">
+                  ↗ 새 창
+                </a>
               </div>
             </div>
-            <div id="chapter-grid"
-                 class="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto md:grid-cols-2 2xl:grid-cols-3"
-                 aria-live="polite">
-              <article class="dashboard-card p-4 text-sm"
-                       style="color: var(--text-muted)">
-                STATE.json 데이터를 기다리는 중...
-              </article>
+            <div class="relative min-h-0 flex-1 overflow-hidden rounded-md"
+                 style="background: white; border: 1px solid var(--border-strong)">
+              <iframe id="deck-preview" src="about:blank"
+                      class="absolute inset-0 h-full w-full"
+                      title="교안 미리보기"></iframe>
+              <div id="preview-empty"
+                   class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center"
+                   style="background: var(--surface); color: var(--text-muted)">
+                <p class="text-sm font-medium">교안 미리보기</p>
+                <p class="text-[11px]">developer 가 deck.html 을 빌드하면 자동 표시됩니다</p>
+                <p class="text-[10px]" style="color: var(--text-dim)">5초마다 mtime 폴링 · 변경 시 iframe reload</p>
+              </div>
             </div>
           </section>
 
