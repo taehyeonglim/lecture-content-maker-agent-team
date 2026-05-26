@@ -147,6 +147,20 @@ section.layout-closing .body-area {
 #### D. 이미지 figure 는 항상 세로 중앙 (PI 정책 2026-05-26)
 PI 명시: "이미지는 항상 정렬이 중요해. 높이적으로 중앙에 위치하도록 항상 해야해." → figure 가 부모 영역의 **세로 중앙**에 위치해야 함. 텍스트(copy)는 자연 흐름 그대로 위에서 시작 — figure 만 가운데.
 
+**⚠ 선행 조건 — `.body-area` 에 명시적 height 박을 것**:
+```css
+.body-area {
+  position: absolute;
+  top: calc(var(--header-h) + var(--content-top));
+  left: var(--margin-x);
+  right: var(--margin-x);
+  /* Reveal.js transform:scale 적용 section 안에서 top+bottom 으로 implicit height 가
+     일부 webkit 에서 flex/grid 컨테이너로 안 전달됨 — 명시적 height 필수 */
+  height: calc(100% - var(--header-h) - var(--content-top) - var(--content-bot));
+}
+```
+이게 없으면 layout-image 의 flex stretch 가 작동 안 해 figure 가 contents-based height 로 떨어져 상단 정렬됨 (PI 직접 확인된 실제 사례 — chapter-01 PoC 디버깅 4 cycle 소요).
+
 ```css
 /* ✅ layout-image (flex 좌우 분할): flex 가 absolute parent 의 implicit height 안정적 인식 */
 section.layout-image .body-area {
