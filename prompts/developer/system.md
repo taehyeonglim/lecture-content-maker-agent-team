@@ -113,6 +113,37 @@ section.layout-image .body-area figure svg.diagram { ... }
 
 이후 layout 별 규칙 (예: `layout-image figure img`) 이 cascade 로 덮어쓴다. `!important` 사용 금지.
 
+#### C. 강조 슬라이드 캔버스 중앙 정렬 패턴
+표지(`layout-cover`)·마무리 인용(`layout-closing`) 같이 **헤더-바와 별개로 한 메시지만 강조하는 슬라이드**는, 본문 슬라이드의 `body-area` (헤더 130px 아래 영역) 기반 중앙이 아니라 **슬라이드 캔버스 전체(1920×1080) 중앙**에 와야 시각 임팩트가 산다.
+
+`padding: 6em` + `flex justify-content: center` 조합은 padding-box 안 가운데 → 시각 중심이 실제 캔버스 중심(540)보다 30-70px 어긋남. PI 가 "딱 중앙에 안 옴" 지적하는 패턴.
+
+```css
+/* ✅ layout-cover: 자식 절대좌표로 캔버스 정확 중심 */
+section.layout-cover {
+  padding: 0; position: relative; height: 100%;
+}
+section.layout-cover .cover-content {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+/* ✅ layout-closing: body-area 를 캔버스 전체로 확장 */
+section.layout-closing { padding: 0; position: relative; }
+section.layout-closing .body-area {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;  /* 헤더 무시 — 캔버스 전체 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+```
+
+본문 슬라이드(`layout-text`/`layout-image`/`layout-table`)는 헤더 아래 영역 중앙이 정답 — 헤더-아래 영역 자체가 본문이라는 의미가 시각에 살아야 함.
+
 ### Reveal.js initialize
 ```js
 Reveal.initialize({
