@@ -148,15 +148,16 @@ section.layout-closing .body-area {
 PI 명시: "이미지는 항상 정렬이 중요해. 높이적으로 중앙에 위치하도록 항상 해야해." → figure 가 부모 영역의 **세로 중앙**에 위치해야 함. 텍스트(copy)는 자연 흐름 그대로 위에서 시작 — figure 만 가운데.
 
 ```css
-/* ✅ layout-image (grid 1fr 1fr): copy 와 figure 개별 align-self */
+/* ✅ layout-image (grid 1fr 1fr): grid row 가 body-area 전체 차지해야 align-self 가 의미 있음 */
 section.layout-image .body-area {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;       /* ⚠ 필수 — row 가 contents-based 면 figure 가 cell 다 차지해서 center 효과 없음 */
   gap: 56px;
   /* align-items 통째로 지정 X — 자식별 align-self */
 }
 section.layout-image .body-area .copy   { align-self: start;  }
-section.layout-image .body-area figure  { align-self: center; }   /* 세로 중앙 */
+section.layout-image .body-area figure  { align-self: center; }   /* body-area 세로 중앙 */
 
 /* ✅ layout-image-wide (flex column 풀폭): figure 가 남은 공간 + 가운데 */
 section.layout-image-wide .body-area {
