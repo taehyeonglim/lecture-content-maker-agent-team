@@ -148,16 +148,23 @@ section.layout-closing .body-area {
 PI 명시: "이미지는 항상 정렬이 중요해. 높이적으로 중앙에 위치하도록 항상 해야해." → figure 가 부모 영역의 **세로 중앙**에 위치해야 함. 텍스트(copy)는 자연 흐름 그대로 위에서 시작 — figure 만 가운데.
 
 ```css
-/* ✅ layout-image (grid 1fr 1fr): grid row 가 body-area 전체 차지해야 align-self 가 의미 있음 */
+/* ✅ layout-image (flex 좌우 분할): flex 가 absolute parent 의 implicit height 안정적 인식 */
 section.layout-image .body-area {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr;       /* ⚠ 필수 — row 가 contents-based 면 figure 가 cell 다 차지해서 center 효과 없음 */
+  display: flex;                 /* grid 대신 flex — absolute parent 안에서 height 인식 안정성 ↑ */
   gap: 56px;
-  /* align-items 통째로 지정 X — 자식별 align-self */
+  align-items: stretch;          /* 자식 둘 다 body-area 전체 높이 차지 */
 }
-section.layout-image .body-area .copy   { align-self: start;  }
-section.layout-image .body-area figure  { align-self: center; }   /* body-area 세로 중앙 */
+section.layout-image .body-area .copy {
+  flex: 1 1 0; min-width: 0;
+  /* 텍스트는 block flow 자연 흐름 — 위에서부터 */
+}
+section.layout-image .body-area figure {
+  flex: 1 1 0; min-width: 0;
+  /* 이미지는 figure 안에서 세로 중앙 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;       /* img + figcaption 묶음 세로 중앙 */
+}
 
 /* ✅ layout-image-wide (flex column 풀폭): figure 가 남은 공간 + 가운데 */
 section.layout-image-wide .body-area {
