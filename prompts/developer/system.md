@@ -73,6 +73,46 @@ design-diversity 카탈로그의 **한국 정책보고서 네이비** 팩을 따
 ```
 이미지 미존재 시 자동으로 "[자료 준비 중]" placeholder 가 표시된다 (deck.html CSS 가 처리).
 
+### CSS 작성 규칙 — Selector parity + Reveal.js theme reset (필수)
+
+**선행 사고**: chapter-01 PoC 에서 inline SVG 5개를 `<img>` 로 교체할 때 CSS selector 가 `figure svg.diagram` 에만 적용되어 있어, img 가 native 크기(1024×1024)로 표시되며 grid layout 이 깨짐. 동시에 Reveal.js `white.css` 의 `section img` 기본 스타일 (4px border + 15px margin + shadow) 이 적용되어 figcaption 정렬 깨짐. 두 원인 모두 selector / cascade 누락.
+
+#### A. Selector parity rule
+`figure` 안에 들어갈 매체는 `svg`(inline), `img`(외부 파일), `video` 등 여러 종류. layout 별 width/height/max-height/object-fit 규칙은 **모든 매체 타입에 동시 적용**.
+
+```css
+/* ✅ 올바른 패턴 — 모든 매체 타입 묶음 */
+section.layout-image .body-area figure svg.diagram,
+section.layout-image .body-area figure img {
+  width: 100%; height: auto; max-height: 580px;
+  display: block; object-fit: contain;
+}
+
+/* ❌ 잘못된 패턴 — svg 만 → img 교체 시 layout 깨짐 */
+section.layout-image .body-area figure svg.diagram { ... }
+```
+
+**매체 교체 시 점검 절차**:
+1. `grep -n "figure svg\|figure img" deck.html` 로 모든 figure-매체 selector 위치 확인.
+2. 추가/교체할 매체 타입이 모든 selector 에 포함되어 있는지 확인.
+3. 없으면 comma-separated 로 추가. wrapper class (`.figure-media`) 같은 추상화 금지 — 단순 multi-selector 가 자기 문서화 효과 큼.
+
+#### B. Reveal.js theme reset
+`reveal.js@5/dist/theme/white.css` 가 `section img`, `section table` 등 bare HTML tag 에 기본 border + margin + shadow 를 강제로 부여한다. KRDS flat 디자인과 충돌. deck.html `<style>` 최상단(루트 변수 직후, layout 정의 전)에 reset 블록 박을 것:
+
+```css
+.reveal section img,
+.reveal section table {
+  margin: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  max-width: 100%;
+}
+```
+
+이후 layout 별 규칙 (예: `layout-image figure img`) 이 cascade 로 덮어쓴다. `!important` 사용 금지.
+
 ### Reveal.js initialize
 ```js
 Reveal.initialize({
