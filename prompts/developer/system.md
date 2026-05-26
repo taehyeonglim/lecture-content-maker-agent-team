@@ -144,6 +144,41 @@ section.layout-closing .body-area {
 
 본문 슬라이드(`layout-text`/`layout-image`/`layout-table`)는 헤더 아래 영역 중앙이 정답 — 헤더-아래 영역 자체가 본문이라는 의미가 시각에 살아야 함.
 
+#### D. 이미지 figure 는 항상 세로 중앙 (PI 정책 2026-05-26)
+PI 명시: "이미지는 항상 정렬이 중요해. 높이적으로 중앙에 위치하도록 항상 해야해." → figure 가 부모 영역의 **세로 중앙**에 위치해야 함. 텍스트(copy)는 자연 흐름 그대로 위에서 시작 — figure 만 가운데.
+
+```css
+/* ✅ layout-image (grid 1fr 1fr): copy 와 figure 개별 align-self */
+section.layout-image .body-area {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  /* align-items 통째로 지정 X — 자식별 align-self */
+}
+section.layout-image .body-area .copy   { align-self: start;  }
+section.layout-image .body-area figure  { align-self: center; }   /* 세로 중앙 */
+
+/* ✅ layout-image-wide (flex column 풀폭): figure 가 남은 공간 + 가운데 */
+section.layout-image-wide .body-area {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+section.layout-image-wide .body-area figure {
+  flex: 1;                       /* heading/callout 위, figure 남은 공간 다 차지 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;       /* 그 안에서 세로 중앙 */
+  align-items: center;
+}
+
+/* ❌ 잘못된 패턴 */
+section.layout-image .body-area { align-items: start; }   /* figure 위쪽 정렬 */
+section.layout-image-wide .body-area { /* justify-content 미지정 */ }  /* figure 가 자연 흐름 = 아래 */
+```
+
+본문(copy) 텍스트는 항상 위에서 시작 (slide-heading + body-text 흐름이 자연). figure 만 가운데 → 텍스트가 길든 짧든 이미지가 시각적으로 안정적인 위치.
+
 ### Reveal.js initialize
 ```js
 Reveal.initialize({
