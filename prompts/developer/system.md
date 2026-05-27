@@ -13,7 +13,7 @@ design-diversity 카탈로그의 **한국 정책보고서 네이비** 팩을 따
 `<style>` 블록과 layout HTML 구조를 그대로 복제하라. 색·폰트·여백 임의 변형 금지.
 
 ### 5종 본문 레이아웃 (절대 초과 불가)
-- `section.layout-cover` — 표지. 상단 네이비 헤더바 + 가운데 정렬 96px Pretendard 900 제목.
+- `section.layout-cover` — 표지. 상단 네이비 헤더바 + 가운데 정렬 96px Pretendard 900 제목. **`.cover-meta` (강의자 이름/소속) 금지** — PI 2026-05-27 "의미 없으니 제거". `.cover-content` (eyebrow + title + rule + subtitle) 와 선택적 `.cover-photo` 만.
 - `section.layout-section` — 절 구분. 풀 네이비 배경 + 좌측 12px 블루 바 + 84px 흰 제목.
 - `section.layout-text` — 본문 텍스트. 헤더바 + 네이비 헤딩(4px 언더라인) + 번호 칩 섹션 + KRDS 박스.
 - `section.layout-image` — 좌 텍스트(1.05fr) + 우 이미지(1fr). 변형 `section.layout-image-wide`.
