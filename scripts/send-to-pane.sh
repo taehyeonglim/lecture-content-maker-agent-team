@@ -8,7 +8,7 @@ usage() {
   cat >&2 <<'USAGE'
 Usage: bash scripts/send-to-pane.sh [--wait] [--timeout seconds] <pane_name> <task_id> <command_or_prompt>
 
-Pane names: director, decomposer, composer, designer, developer
+Pane names: director, decomposer, composer, designer, developer, visual-reviewer
 USAGE
 }
 
@@ -17,7 +17,7 @@ pane_id_for() {
   # fallback: title 매칭 (이전 버전 호환)
   local role="$1"
   case "$role" in
-    director|decomposer|composer|designer|developer) ;;
+    director|decomposer|composer|designer|developer|visual-reviewer) ;;
     *) return 1 ;;
   esac
   local pane
@@ -141,7 +141,7 @@ main() {
   # task_id 패턴(task-<chapter>-<role>)에서 chapter_id 추출 — director가 STATE.json
   # active_agents 갱신을 잊지 않도록 send-to-pane.sh 가 자동 처리한다.
   local chapter_id=""
-  if [[ "$task_id" =~ ^task-(chapter-[0-9]+)-(decomposer|composer|designer|developer|reviewer)$ ]]; then
+  if [[ "$task_id" =~ ^task-(chapter-[0-9]+)-(decomposer|composer|designer|developer|reviewer|visual-reviewer(-round-[0-9]+)?)$ ]]; then
     chapter_id="${BASH_REMATCH[1]}"
   fi
 
