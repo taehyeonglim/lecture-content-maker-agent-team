@@ -26,16 +26,18 @@ design-diversity 카탈로그의 **한국 정책보고서 네이비** 팩을 따
 ```
 색 규칙: 네이비=구조 / 블루=강조 / 레드·그린=방향성. 무지개 차트 금지.
 
-### 폰트 시스템 (Pretendard 단일 — 강의실 뒷자리 32pt 최저)
+### 폰트 시스템 (Pretendard 단일 — 강의실 뒷자리 본문 40px 최저, PI 2026-05-27 재갱신)
 ```html
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
 ```
 ```css
 .reveal { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; }
 ```
-폰트 크기 (1920×1080 캔버스 기준 px 직접):
-- 표지 메인 96px / 절 제목 84px / 헤더바 타이틀 40px / 슬라이드 헤딩 40px
-- 본문 32px / KRDS 박스 30px / 번호 칩 섹션 30px / 캡션 20px
+폰트 크기 (1920×1080 캔버스 기준 px 직접 — PI 가 32px 본문도 "교실 뒤에서 안 보인다" 지적 → 40px 재상향):
+- 표지 메인 120px / 절 제목 100px / 마무리 인용 68px
+- 슬라이드 헤딩 48px / 헤더바 타이틀 48px / 표지 부제 48px / flow-card step-key 44px
+- **본문 40px** (최저, body-text) / 콜아웃·번호섹션 36px / 표 td / flex-2col ul 34px
+- 표 th / 표지 eyebrow 32px / 라벨·헤더 chip 28px / 캡션 24px / 헤더 메타 22px
 
 ### 헤더바 + 번호 칩 패턴 (본문 슬라이드 필수)
 ```html
