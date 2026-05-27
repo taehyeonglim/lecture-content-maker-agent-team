@@ -45,6 +45,8 @@ PROMPT
 
 **Phase 2 (chapter-02 ~ chapter-10, 직렬)**: PI 지시로 활성화. 다중 챕터 직렬 처리 가능 (병렬은 여전히 금지 — PRD 04 DO NOT). PI 가 한 prompt 로 여러 챕터 큐를 던지면 STATE.json 에 모두 등록 후 chapter-NN 순서대로 직렬 진행 (한 챕터 완료 후 다음). 상태의 진실 공급원은 `STATE.json` 하나이며, director만 write 권한을 가진다.
 
+**Phase 3 (visual-review 도입, 2026-05-28~)**: developer 완료 후 자동 시각 검증. visual-reviewer × ≤3 round, auto-fix, manual_override 시 챕터 정지.
+
 **chapter-01 산출물을 패턴 참조로 활용**: 다음 챕터부터 designer/developer 가 chapter-01 의 deck.html / DESIGN.md 를 reference template 으로 활용. 핵심 패턴은 `prompts/designer/system.md`, `prompts/developer/system.md`, memory `deck_css_patterns.md` 에 박혀 있음 — 자동 학습됨.
 
 ## Inputs
@@ -96,6 +98,12 @@ if next_step == "designed" and task.status == "done":
   # → DESIGN.md 의 Image Fetch Requests 표를 파싱해 14장 일괄 생성 (Wikimedia + codex fallback)
   # → 완료 후 developer 단계로 진입 (deck.html 이 실제 이미지 사용 가능)
 
+# ⚠ developer 완료 직후 visual-review 자동 실행
+if next_step == "developed" and task.status == "done":
+  bash scripts/run-visual-review.sh <chapter_id>
+  # → visual-reviewer max 3 round + auto-fix + rollback
+  # → 통과 시 chapter.status = "verified", 실패 시 manual_override
+
 while true:
   output = tmux_capture_pane(role)
   if contains(output, "# AGENT_DONE_SIGNAL: " + task.id):
@@ -132,6 +140,7 @@ continue to next phase when PI instruction allows
 | `decomposed` | composer | `content/chapters/chapter-01/composed.md` |
 | `composed` | designer | `content/chapters/chapter-01/DESIGN.md` |
 | `designed` | developer | `content/chapters/chapter-01/slides/deck.html`, `deck.pdf` |
+| `developed` | visual-reviewer | `content/chapters/chapter-01/visual-review/round-{1..3}/eval.json` + auto-fix |
 
 ## Command Patterns
 
@@ -152,6 +161,12 @@ tmux capture-pane -t lecture-team:0.2 -p -S -200
 
 ```bash
 bash scripts/run-review.sh chapter-01 composer
+```
+
+시각 검증은 visual-reviewer가 자동 실행한다.
+
+```bash
+bash scripts/run-visual-review.sh chapter-01
 ```
 
 `STATE.json` 갱신은 jq를 사용하되 항상 tmp 파일을 거친다.
