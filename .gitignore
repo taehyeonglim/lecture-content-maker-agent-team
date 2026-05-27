@@ -38,6 +38,9 @@ venv/
 .pumasi/.jobs/
 .pumasi/output/
 
+# ─── superpowers brainstorm mockup ───
+.superpowers/
+
 # ─── 에디터/IDE ───
 .vscode/
 .idea/
