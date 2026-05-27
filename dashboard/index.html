@@ -7,6 +7,28 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="style.css">
+    <style>
+      .visual-review-status {
+        font-size: 13px;
+        color: #5C6470;
+        margin-top: 8px;
+      }
+      .visual-review-status .rounds .round-badge {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        font-size: 11px;
+        line-height: 18px;
+        text-align: center;
+        margin-right: 4px;
+        color: #fff;
+      }
+      .visual-review-status .round-badge.pass { background: #1F9D57; }
+      .visual-review-status .round-badge.fail { background: #E03B3B; }
+      .visual-review-status .round-badge.running { background: #1B66C9; }
+      .chapter-card.manual-override { border-left: 4px solid #E03B3B; background: #FFF5F5; }
+    </style>
   </head>
   <body class="h-screen overflow-hidden antialiased">
     <div class="relative z-10 flex h-screen w-full flex-col gap-3 px-4 py-3 sm:px-5">

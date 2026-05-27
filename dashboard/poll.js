@@ -381,6 +381,33 @@ function renderTask(role, task) {
   return item;
 }
 
+function renderVisualReview(row, chapter) {
+  const vrStatus = row.querySelector('.visual-review-status .rounds');
+  if (!vrStatus) return;
+  vrStatus.replaceChildren();
+
+  const vrTask = (chapter.tasks || []).find(t => t.role === 'visual-reviewer');
+  if (!vrTask) {
+    const notRunning = createElement("span");
+    notRunning.textContent = '미실행';
+    notRunning.style.color = '#999';
+    vrStatus.appendChild(notRunning);
+    return;
+  }
+
+  const rounds = vrTask.rounds || [];
+  rounds.forEach((r, idx) => {
+    const badge = createElement("span", "round-badge " + (r.issues_count === 0 ? 'pass' : (vrTask.status === 'failed' ? 'fail' : 'running')));
+    badge.textContent = String(idx + 1);
+    badge.title = `Round ${idx + 1}: ${r.issues_count} issues, auto_fixed=${r.auto_fixed}`;
+    vrStatus.appendChild(badge);
+  });
+
+  if (vrTask.status === 'failed') {
+    row.classList.add('manual-override');
+  }
+}
+
 function renderChapterRow(chapter) {
   const c = chapter || {};
   const row = createElement("li", "chapter-row");
@@ -420,6 +447,13 @@ function renderChapterRow(chapter) {
     taskRow.append(dot);
   });
 
+  // 시각 검수 상태
+  const vrStatus = createElement("div", "visual-review-status");
+  const vrLabel = createElement("span", "label");
+  vrLabel.textContent = "시각 검수";
+  const vrRounds = createElement("span", "rounds");
+  vrStatus.append(vrLabel, vrRounds);
+
   // 클릭 시 preview 챕터 전환
   row.addEventListener("click", () => {
     previewChapterId = c.id;
@@ -429,7 +463,8 @@ function renderChapterRow(chapter) {
     row.classList.add("is-active");
   });
 
-  row.append(header, taskRow);
+  row.append(header, taskRow, vrStatus);
+  renderVisualReview(row, chapter);
   return row;
 }
 
