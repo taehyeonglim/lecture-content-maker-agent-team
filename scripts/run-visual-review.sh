@@ -50,7 +50,7 @@ DESIGN.md: $PWD/content/chapters/${CHAPTER}/DESIGN.md
 
 종료 시: touch /tmp/lecture-team-sentinel-${TASK_ID}.done"
 
-  if ! bash scripts/send-to-pane.sh visual-reviewer "$TASK_ID" "$PROMPT"; then
+  if ! bash scripts/send-to-pane.sh --wait visual-reviewer "$TASK_ID" "$PROMPT"; then
     echo "  ✗ visual-reviewer 호출 실패" >&2
     bash scripts/update-state.sh "$CHAPTER" visual-reviewer failed "send-to-pane.sh failed"
     exit 1
@@ -65,6 +65,10 @@ DESIGN.md: $PWD/content/chapters/${CHAPTER}/DESIGN.md
 
   ISSUES=$(jq -r '.issues_count' "$EVAL")
   echo "  📋 issues_count: ${ISSUES}" >&2
+
+  # Round 통계를 STATE.json 의 rounds[] 에 append
+  AUTO_FIXED_FLAG="false"
+  bash scripts/update-state.sh "$CHAPTER" visual-reviewer "$ROUND" "$ISSUES" "$AUTO_FIXED_FLAG"
 
   # 3-a. 통과
   if [[ "$ISSUES" -eq 0 ]]; then
