@@ -247,6 +247,7 @@ create_session() {
   local composer_pane
   local designer_pane
   local developer_pane
+  local visual_reviewer_pane
   local monitor_pane
   local director_message_quoted
   local resume_note_quoted
@@ -286,9 +287,10 @@ create_session() {
   decomposer_pane="$worker_area"
   composer_pane="$(tmux split-window -h -p 50 -t "$decomposer_pane" -P -F '#{pane_id}' -c "$root_dir")"
 
-  # 5) bottom_row → designer(좌) + developer(우)
+  # 5) bottom_row → designer(좌) + developer(중) + visual-reviewer(우)
   designer_pane="$bottom_row"
   developer_pane="$(tmux split-window -h -p 50 -t "$designer_pane" -P -F '#{pane_id}' -c "$root_dir")"
+  visual_reviewer_pane="$(tmux split-window -h -p 50 -t "$developer_pane" -P -F '#{pane_id}' -c "$root_dir")"
 
   # 시각용 title (Claude Code 부팅 시 "✳ Claude Code"로 덮어써질 수 있음)
   tmux select-pane -t "$director_pane" -T "director"
@@ -296,6 +298,7 @@ create_session() {
   tmux select-pane -t "$composer_pane" -T "composer"
   tmux select-pane -t "$designer_pane" -T "designer"
   tmux select-pane -t "$developer_pane" -T "developer"
+  tmux select-pane -t "$visual_reviewer_pane" -T "visual-reviewer"
   tmux select-pane -t "$monitor_pane" -T "STATE.json watch"
 
   # 안정적 lookup용 pane-specific 사용자 옵션 (@role) — Claude Code 의 title 변경에 영향받지 않음
@@ -304,6 +307,7 @@ create_session() {
   tmux set-option -p -t "$composer_pane" '@role' 'composer'
   tmux set-option -p -t "$designer_pane" '@role' 'designer'
   tmux set-option -p -t "$developer_pane" '@role' 'developer'
+  tmux set-option -p -t "$visual_reviewer_pane" '@role' 'visual-reviewer'
   tmux set-option -p -t "$monitor_pane" '@role' 'monitor'
 
   # 사용자 표시용 라벨 (@label) — pane-border-format 이 이걸 우선 표시. Claude Code title 덮어쓰기 영향 없음.
@@ -312,6 +316,7 @@ create_session() {
   tmux set-option -p -t "$composer_pane" '@label' 'Composer'
   tmux set-option -p -t "$designer_pane" '@label' 'Designer'
   tmux set-option -p -t "$developer_pane" '@label' 'Developer'
+  tmux set-option -p -t "$visual_reviewer_pane" '@label' 'Visual Reviewer'
   tmux set-option -p -t "$monitor_pane" '@label' 'STATE.json watch'
 
   director_message_quoted="$(shell_quote "${chapter_id} 처리 시작 — STATE.json 확인 후 다음 작업을 진행하세요.")"
@@ -321,6 +326,7 @@ create_session() {
   send_bootstrap "$composer_pane" "composer" "$root_quoted"
   send_bootstrap "$designer_pane" "designer" "$root_quoted"
   send_bootstrap "$developer_pane" "developer" "$root_quoted"
+  send_bootstrap "$visual_reviewer_pane" "visual-reviewer" "$root_quoted"
   # Monitor pane: 5초마다
   #   1) aggregate-claude-usage.sh 호출 → ~/.claude/projects/*.jsonl 의 Opus/Sonnet 토큰을 STATE.json 에 반영
   #   2) STATE.json 의 핵심 요약을 화면에 표시
