@@ -81,7 +81,7 @@ Phase 2/3는 [PRD/03_PHASES.md](./PRD/03_PHASES.md) 참고.
 | python3 | 3.x | 로컬 정적 대시보드 서버 |
 | decktape | (npm 글로벌) | Reveal.js → PDF |
 | kordoc | v2.9.0+ (MCP) | HWP/HWPX/PDF/Office → Markdown |
-| chromium | 125+ | deck.html headless 캡처 (visual-review) |
+| Google Chrome (또는 Chromium) | 100+ | deck.html headless 캡처 (visual-review). brew chromium 이 Trash 처리되는 macOS 케이스 있어 Chrome 우선. |
 
 (gemini CLI는 Phase 3 진입 시 검증)
 
