@@ -24,6 +24,7 @@ FAIL=0
 
 # false positive 검사 (정상 deck 먼저)
 echo "━━━ False positive 검사 (정상 deck) ━━━"
+rm -rf content/chapters/chapter-01/visual-review/
 bash scripts/run-visual-review.sh chapter-01
 FP_EVAL="content/chapters/chapter-01/visual-review/round-1/eval.json"
 FP_ISSUES=$(jq -r '.issues_count' "$FP_EVAL")
@@ -38,6 +39,7 @@ fi
 for N in 1 2 3 4 5; do
   echo ""
   echo "━━━ Defect ${N}: ${EXPECTED_CATEGORY[$N]} ━━━"
+  rm -rf content/chapters/chapter-01/visual-review/
   cp "$DECK_BAK" "$DECK"   # 원본 복구
   bash "tests/visual-review/chapter-01-known-bad/inject-defect-${N}.sh"
   bash scripts/run-visual-review.sh chapter-01 || true   # 실패해도 eval.json 만들어짐
