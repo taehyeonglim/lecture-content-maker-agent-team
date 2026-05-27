@@ -12,6 +12,14 @@
 STATE.json
 STATE.json.tmp
 STATE.json.bak
+STATE.json.before-*
+STATE.json.broken-*
+STATE\ *.json
+test_*.png
+
+# ─── PI 사적 강의 자료 (저작권/사적 자료, 공개 X) ───
+# 다른 사용자는 자기 강의 자료를 동일한 폴더 구조로 넣으면 됨.
+Previous_lecture_content/
 
 # ─── 산출물 (Phase 1 PoC 결과는 별도 관리 정책) ───
 content/
