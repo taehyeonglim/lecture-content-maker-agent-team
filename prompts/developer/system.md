@@ -26,18 +26,22 @@ design-diversity 카탈로그의 **한국 정책보고서 네이비** 팩을 따
 ```
 색 규칙: 네이비=구조 / 블루=강조 / 레드·그린=방향성. 무지개 차트 금지.
 
-### 폰트 시스템 (Pretendard 단일 — 강의실 뒷자리 본문 40px 최저, PI 2026-05-27 재갱신)
+### 폰트 시스템 (Pretendard — 강의실 뒷자리 본문 44px 최저, PI 2026-05-27 2차 재갱신)
 ```html
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
 ```
 ```css
 .reveal { font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif; }
 ```
-폰트 크기 (1920×1080 캔버스 기준 px 직접 — PI 가 32px 본문도 "교실 뒤에서 안 보인다" 지적 → 40px 재상향):
-- 표지 메인 120px / 절 제목 100px / 마무리 인용 68px
-- 슬라이드 헤딩 48px / 헤더바 타이틀 48px / 표지 부제 48px / flow-card step-key 44px
-- **본문 40px** (최저, body-text) / 콜아웃·번호섹션 36px / 표 td / flex-2col ul 34px
-- 표 th / 표지 eyebrow 32px / 라벨·헤더 chip 28px / 캡션 24px / 헤더 메타 22px
+폰트 크기 (1920×1080 캔버스 px). PI 가 40px 본문도 "조금 더 키워야" 지시 → 본문 계열만 +4px 추가, **헤더 계열은 그대로** ("헤더 폰트는 이정도면 충분" 확인됨).
+
+- **헤더 격 (그대로)**: 표지 120 / 절제목 100 / 마무리 68 / 슬라이드 헤딩·헤더바·표지부제 48 / 표 th·표지 eyebrow 32 / 라벨·헤더 chip 28
+- **본문 격 (+4 상향)**:
+  - **body-text 44px** (최저)
+  - callout · num-section .text · copy ul 40px
+  - 표 td · flex-2col col-card ul 38px
+- flow-card step-key 44px (헤더성 키지만 우연히 본문과 같음)
+- 캡션 24px / 헤더 메타 22px / 마이크로 18px 이하 (그대로)
 
 ### 헤더바 + 번호 칩 패턴 (본문 슬라이드 필수)
 ```html
