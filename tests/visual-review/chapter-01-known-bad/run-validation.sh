@@ -11,13 +11,16 @@ DECK_BAK="${DECK}.before-validation"
 
 cp "$DECK" "$DECK_BAK"
 
-declare -A EXPECTED_CATEGORY=(
-  [1]="figure-vertical-alignment"
-  [2]="canvas-center-alignment"
-  [3]="content-overflow"
-  [4]="figure-vertical-alignment"
-  [5]="flat-design-violation"
-)
+# bash 3.2 호환 (macOS 기본) — associative array 대신 case 함수
+expected_category() {
+  case "$1" in
+    1) echo "figure-vertical-alignment" ;;
+    2) echo "canvas-center-alignment" ;;
+    3) echo "content-overflow" ;;
+    4) echo "figure-vertical-alignment" ;;
+    5) echo "flat-design-violation" ;;
+  esac
+}
 
 PASS=0
 FAIL=0
@@ -38,16 +41,16 @@ fi
 # 5 결함 각각 검사
 for N in 1 2 3 4 5; do
   echo ""
-  echo "━━━ Defect ${N}: ${EXPECTED_CATEGORY[$N]} ━━━"
+  echo "━━━ Defect ${N}: $(expected_category $N) ━━━"
   rm -rf content/chapters/chapter-01/visual-review/
   cp "$DECK_BAK" "$DECK"   # 원본 복구
   bash "tests/visual-review/chapter-01-known-bad/inject-defect-${N}.sh"
   bash scripts/run-visual-review.sh chapter-01 || true   # 실패해도 eval.json 만들어짐
   EVAL="content/chapters/chapter-01/visual-review/round-1/eval.json"
-  FOUND=$(jq -r --arg cat "${EXPECTED_CATEGORY[$N]}" \
+  FOUND=$(jq -r --arg cat "$(expected_category $N)" \
     '[.issues[] | select(.category == $cat)] | length' "$EVAL")
   if [[ "$FOUND" -ge 1 ]]; then
-    echo "  ✓ defect-${N} 발견 (${EXPECTED_CATEGORY[$N]})"
+    echo "  ✓ defect-${N} 발견 ($(expected_category $N))"
     PASS=$((PASS + 1))
   else
     echo "  ✗ defect-${N} 못 찾음" >&2
