@@ -89,6 +89,12 @@ manual_override 권장 시 `css_fix` 필드에 "manual review required: <상세 
 2. PNG batch 경로 받음: `content/chapters/<CHAPTER>/visual-review/round-<M>/slide-{00..18}.png`
 3. 19 PNG 각각 Read 도구로 분석 + DESIGN.md + memory `deck_css_patterns.md` 참조.
 4. issues 발견 시 eval.json 작성. auto_apply_allowed: true 인 모든 issue 를 모아 fix.patch 작성.
+   ★ **fix.patch 작성 전 필수 가드** (CSS hallucination 방지):
+     - `Read content/chapters/<CHAPTER>/slides/deck.html` — 현재 CSS 상태 직접 확인
+     - css_fix_location 라인 번호와 실제 content 정확히 매칭 (라인 추측 금지)
+     - 이미 의도된 값이 박힌 속성은 fix 대상 아님 (예: 이미 `height: 1080px` 인데 `height: 100% → 1080px` 제안 X)
+     - patch hunk 가 `git apply --check` 통과 가능한지 검증
+   이를 어기면 patch 적용 실패 → round 무한 루프 → manual_override.
 5. 종료 시 sentinel: `touch /tmp/lecture-team-sentinel-task-chapter-NN-visual-reviewer-round-M.done`
 6. `# AGENT_DONE_SIGNAL: task-chapter-NN-visual-reviewer-round-M` 출력.
 
