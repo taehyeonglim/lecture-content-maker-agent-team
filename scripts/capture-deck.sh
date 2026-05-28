@@ -43,23 +43,39 @@ echo "🎬 Capturing ${CHAPTER} round ${ROUND} (binary: ${CHROME_BIN})..." >&2
 
 # Reveal.js 슬라이드 hash 0-base (#/0 ~ #/18). 19 슬라이드.
 # --virtual-time-budget=5000 으로 transition fade 안정화.
+# --disable-dev-shm-usage: /dev/shm 대신 /tmp 사용 (메모리 압박 시 chrome SIGKILL 회피).
+# slide-N 캡처 실패 시 최대 3회 retry (lecture-team session 의 6 claude processes 와 메모리 경합).
 for IDX in $(seq 0 18); do
   OUT="${OUT_DIR}/slide-$(printf '%02d' $IDX).png"
-  "$CHROME_BIN" \
-    --headless=new \
-    --no-sandbox \
-    --disable-gpu \
-    --window-size=1920,1080 \
-    --virtual-time-budget=5000 \
-    --screenshot="$OUT" \
-    "file://${DECK}#/${IDX}" 2>/dev/null || true
+  for ATTEMPT in 1 2 3; do
+    "$CHROME_BIN" \
+      --headless=new \
+      --no-sandbox \
+      --disable-gpu \
+      --disable-dev-shm-usage \
+      --window-size=1920,1080 \
+      --virtual-time-budget=5000 \
+      --screenshot="$OUT" \
+      "file://${DECK}#/${IDX}" 2>/dev/null || true
+
+    if [[ -s "$OUT" ]]; then
+      break
+    fi
+
+    if [[ "$ATTEMPT" -lt 3 ]]; then
+      echo "  ⟳ slide-${IDX} attempt ${ATTEMPT} failed, retrying after 2s..." >&2
+      sleep 2
+    fi
+  done
 
   if [[ ! -s "$OUT" ]]; then
-    echo "  ✗ slide-${IDX} failed (no output file)" >&2
+    echo "  ✗ slide-${IDX} failed after 3 attempts" >&2
     continue
   fi
   SIZE=$(stat -f%z "$OUT" 2>/dev/null || stat -c%s "$OUT")
   echo "  ✓ slide-$(printf '%02d' $IDX).png (${SIZE} bytes)" >&2
+
+  sleep 0.3
 done
 
 # 출력 PNG 개수 검증
