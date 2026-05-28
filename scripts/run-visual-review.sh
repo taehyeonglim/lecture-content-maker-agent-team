@@ -24,6 +24,18 @@ fi
 
 echo "🔍 visual-review: ${CHAPTER} (max ${MAX_ROUND} round)" >&2
 
+# idempotency 가드 — 이미 통과한 task 면 즉시 종료 (director 의 중복 dispatch 방지)
+if [[ -f STATE.json ]]; then
+  TASK_ID="task-${CHAPTER}-visual-reviewer"
+  CURRENT_STATUS=$(jq -r --arg cid "$CHAPTER" --arg tid "$TASK_ID" \
+    '.chapters[] | select(.id == $cid) | .tasks[]? | select(.id == $tid) | .status // empty' \
+    STATE.json 2>/dev/null)
+  if [[ "$CURRENT_STATUS" == "done" ]]; then
+    echo "✓ visual-review 이미 통과 (${CHAPTER}) — skip (status=done)" >&2
+    exit 0
+  fi
+fi
+
 for ROUND in $(seq 1 $MAX_ROUND); do
   echo "" >&2
   echo "━━━ Round ${ROUND} ━━━" >&2

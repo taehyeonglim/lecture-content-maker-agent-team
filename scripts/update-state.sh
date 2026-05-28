@@ -70,8 +70,12 @@ else
              chapter: $cid,
              role: $role,
              status: ((((.tasks // []) | map(select(.id == $tid))[0].status) // "running")),
-             rounds: ((((.tasks // []) | map(select(.id == $tid))[0].rounds) // []) +
-                      [{round: $round, issues_count: $issues, auto_fixed: $auto, ts: $ts}]),
+             rounds: (
+               # 같은 round 번호의 기존 entry 는 제거하고 새 entry 로 교체 (idempotent)
+               (((.tasks // []) | map(select(.id == $tid))[0].rounds // [])
+                | map(select(.round != $round)))
+               + [{round: $round, issues_count: $issues, auto_fixed: $auto, ts: $ts}]
+             ),
              updated_at: $ts
            }]
          )
